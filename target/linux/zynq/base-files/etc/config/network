@@ -1,5 +1,3 @@
-# Copyright (C) 2015 OpenWrt.org
-
 config interface loopback
 	option ifname	lo
 	option proto	static
@@ -8,9 +6,9 @@ config interface loopback
 
 config interface lan
 	option ifname	eth0
-	option proto	static
-	option ipaddr	192.168.1.1
-	option netmask	255.255.255.0
+	option type 	bridge
+	option proto	dhcp
+	option hostname	x
 	option ip6assign 60
 
 config globals globals

@@ -54,7 +54,7 @@ TARGET_FILESYSTEMS += cpio
 define ZynqDevice
   define Device/$(1)
 	DEVICE_TITLE := $(1) development board
-	KERNEL := dtb $(2) | kernel-bin | uImage none
+	KERNEL := dtb $(2) | kernel-bin
 	KERNEL_NAME = zImage
 	IMAGES := uramdisk.image.gz fit.itb
 	IMAGE/uramdisk.image.gz := uRamdisk
@@ -67,5 +67,6 @@ endef
 $(eval $(call ZynqDevice,ZC702,zc702))
 $(eval $(call ZynqDevice,ZedBoard,zed))
 $(eval $(call ZynqDevice,ZYBO,zybo))
+$(eval $(call ZynqDevice,Miner,miner))
 
 $(eval $(call BuildImage))

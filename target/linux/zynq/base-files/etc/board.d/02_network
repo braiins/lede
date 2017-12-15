@@ -4,13 +4,7 @@
 . /lib/functions/uci-defaults.sh
 
 board_config_update
-
-case "$(cat /tmp/sysinfo/board_name)" in
-	xlnx,zynq-zc702|xlnx,zynq-zed|xlnx,zynq-zybo)
-		ucidef_set_interface_lan 'eth0'
-		;;
-esac
-
+ucidef_set_interface_lan 'eth0'
 board_config_flush
 
 exit 0
