@@ -49,6 +49,7 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
     $(curdir)/gcc/initial/compile:=$(curdir)/$(LIBC)/headers/install
   endif
 
+  $(curdir)/kernel-headers/prepare:=target/linux/prepare
   $(curdir)/gcc/initial/compile+=$(curdir)/binutils/install
   $(curdir)/gcc/final/prepare:=$(curdir)/gcc/initial/prepare
   $(curdir)/$(LIBC)/compile:=$(curdir)/gcc/initial/install
