@@ -53,6 +53,12 @@ endef
 define Package/cgminer/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/cgminer $(1)/usr/bin/cgminer
+
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_CONF) ./files/cgminer.config $(1)/etc/config/cgminer
+
+	$(INSTALL_DIR) $(1)/etc/init.d/
+	$(INSTALL_BIN) ./files/cgminer.init $(1)/etc/init.d/cgminer
 endef
 
 $(eval $(call BuildPackage,cgminer))
