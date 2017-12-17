@@ -18,7 +18,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/cgminer
   SECTION:=utils
   CATEGORY:=Utilities
-  TITLE:=ASIC and FPGA miner for bitcoin
+  TITLE:=ASIC and FPGA Miner for Bitcoin
   URL:=http://ck.kolivas.org/apps/cgminer
   DEPENDS:=+libcurl
 endef
