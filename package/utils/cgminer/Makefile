@@ -4,14 +4,23 @@ PKG_NAME:=cgminer
 PKG_VERSION:=4.10.0
 PKG_RELEASE:=1
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git@gitlab.bo:x/cgminer.git
-PKG_SOURCE_VERSION:=braiins-old-spi
+PKG_MAINTAINER:=Libor Vasicek <libor.vasicek@braiins.cz>
+
+# define here USE_SOURCE_DIR variable with absolute path to local source directory
+# when you need to develop cgminer
+# USE_SOURCE_DIR:=/path/to/source/directory
+ifdef USE_SOURCE_DIR
+	PKG_SOURCE_VERSION:=local
+else
+	PKG_SOURCE_PROTO:=git
+	PKG_SOURCE_URL:=git@gitlab.bo:x/cgminer.git
+	PKG_SOURCE_VERSION:=braiins-old-spi
+endif
+
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)
-PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.xz
+#PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.xz
 #PKG_MIRROR_HASH:=c6d4f3a6d936dbf9ee5e96f5e843f1127c2867455250100288dc477f646db001
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_SOURCE_SUBDIR)
-PKG_MAINTAINER:=Libor Vasicek <libor.vasicek@braiins.cz>
 
 include $(INCLUDE_DIR)/package.mk
 
