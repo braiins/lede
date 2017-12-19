@@ -8,11 +8,31 @@
  #ifndef CONFIG_ENV_IS_NOWHERE
  # ifndef CONFIG_SYS_NO_FLASH
  /* Environment in NOR flash */
-@@ -219,6 +220,7 @@
+@@ -218,7 +219,18 @@
+ 	"norboot=echo Copying FIT from NOR flash to RAM... && " \
  		"cp.b ${nor_flash_off} ${load_addr} ${fit_size} && " \
  		"bootm ${load_addr}\0" \
++	"bootenv=uEnv.txt\0" \
++	"load_bootenv=load mmc 0 ${load_addr} ${bootenv}\0" \
  	"sdboot=echo Copying FIT from SD to RAM... && " \
 +		"setenv bootargs console=ttyPS0,115200 earlyprintk rdinit=/etc/preinit && " \
++		"if run load_bootenv; then " \
++			"echo Loaded environment from ${bootenv} && " \
++			"env import -t ${load_addr} ${filesize}; " \
++		"fi; " \
++		"if test -n ${uenvcmd}; then " \
++			"echo Running uenvcmd... && " \
++			"run uenvcmd; " \
++		"fi; " \
  		"load mmc 0 ${load_addr} ${fit_image} && " \
  		"bootm ${load_addr}\0" \
  	"jtagboot=echo TFTPing FIT to RAM... && " \
+@@ -231,7 +243,7 @@
+ 		DFU_ALT_INFO
+ 
+ #define CONFIG_BOOTCOMMAND		"run $modeboot"
+-#define CONFIG_BOOTDELAY		3 /* -1 to Disable autoboot */
++#define CONFIG_BOOTDELAY		1 /* -1 to Disable autoboot */
+ #define CONFIG_SYS_LOAD_ADDR		0 /* default? */
+ 
+ /* Miscellaneous configurable options */
