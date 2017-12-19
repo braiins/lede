@@ -84,6 +84,8 @@ define Package/uboot/install/default
 
 	$(CP) $(PKG_BUILD_DIR)/BOOT.bin \
 		$(BIN_DIR)/uboot-$(BOARD)-$(1)
+	$(CP) ./files/uEnv.txt \
+		$(BIN_DIR)/uboot-$(BOARD)-$(1)
 endef
 
 define Package/uboot/install/template

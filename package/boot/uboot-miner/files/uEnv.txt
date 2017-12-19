@@ -1,0 +1,2 @@
+bootargs=console=ttyPS0,115200 noinitrd root=/dev/mmcblk0p2 rw earlyprintk rootfstype=ext4 rootwait
+ethaddr=00:0A:35:FF:FF:FF
