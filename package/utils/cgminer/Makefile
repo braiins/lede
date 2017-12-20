@@ -37,7 +37,7 @@ define Package/cgminer/description
 endef
 
 CPGEN_CONFIGURE:= \
-	CFLAGS="$(TARGET_CFLAGS) $(TARGET_CPPFLAGS)" \
+	CFLAGS="$(TARGET_CFLAGS) $(TARGET_CPPFLAGS) -Os -g -ggdb" \
 	LDFLAGS="$(TARGET_LDFLAGS)" \
 	./configure \
 	--prefix="/usr" \
