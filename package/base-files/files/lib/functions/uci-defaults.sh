@@ -31,6 +31,7 @@ _ucidef_set_interface() {
 	local name="$1"
 	local iface="$2"
 	local proto="$3"
+	local hostname="$4"
 
 	json_select_object "$name"
 	json_add_string ifname "$iface"
@@ -49,6 +50,8 @@ _ucidef_set_interface() {
 
 		json_add_string protocol "$proto"
 	fi
+
+	[ -n "$hostname" ] && json_add_string hostname "$hostname"
 
 	json_select ..
 }

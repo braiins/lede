@@ -57,11 +57,11 @@ generate_static_network() {
 
 addr_offset=2
 generate_network() {
-	local ifname macaddr protocol type ipaddr netmask
+	local ifname macaddr protocol type ipaddr netmask hostname
 
 	json_select network
 		json_select "$1"
-			json_get_vars ifname macaddr protocol ipaddr netmask
+			json_get_vars ifname macaddr protocol ipaddr netmask hostname
 		json_select ..
 	json_select ..
 
@@ -131,6 +131,8 @@ generate_network() {
 			EOF
 		;;
 	esac
+
+	[ -n "$hostname" ] && uci -q set network.$1.hostname="$hostname"
 }
 
 generate_switch_vlans_ports() {
