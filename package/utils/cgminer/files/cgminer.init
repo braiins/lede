@@ -16,7 +16,8 @@ validate_pool_section() {
 validate_miner_section() {
 	uci_validate_section cgminer miner "${1}" \
 		'frequency:range(120,1332):1332' \
-		'voltage:range(10,15):10'
+		'voltage:range(10,15):10' \
+		'chains:list(range(0,5))'
 }
 
 load_pools()
@@ -31,26 +32,36 @@ load_pools()
 	pools=" ${pools} -o $server:$port -u $user -p $password"
 }
 
+convert_chains()
+{
+	res="$1"
+	shift
+	for i in "$@"; do
+		res="${res},$i"
+	done
+	chains="$res"
+}
+
 start_service() {
-	local frequency voltage pools
+	local frequency voltage chains pools
 
 	validate_miner_section miner || {
 		echo "miner validation failed"
 		return 1
 	}
 
+	convert_chains $chains
+
 	config_load cgminer
 	config_foreach load_pools pool
 
 	procd_open_instance
 	procd_set_param command "$PROG" $pools
-	procd_append_param command --A1Pll1 $frequency
-	procd_append_param command --A1Pll2 $frequency
-	procd_append_param command --A1Pll3 $frequency
-	procd_append_param command --A1Pll4 $frequency
-	procd_append_param command --A1Pll5 $frequency
-	procd_append_param command --A1Pll6 $frequency
+	for i in $(seq 1 6); do
+		procd_append_param command --A1Pll$i $frequency
+	done
 	procd_append_param command --A1Vol $voltage
+	[ -n "$chains" ] && procd_append_param command --enabled-chains "$chains"
 	procd_set_param respawn ${respawn_threshold:-3600} ${respawn_timeout:-5} ${respawn_retry:-0}
 	# forward stdout and stderr to logd
 	procd_set_param stdout 1
