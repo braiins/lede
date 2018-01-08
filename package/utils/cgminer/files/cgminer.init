@@ -5,7 +5,8 @@ START=99
 USE_PROCD=1
 PROG=/usr/bin/cgminer
 
-validate_pool_section() {
+validate_pool_section()
+{
 	uci_validate_section cgminer pool "${1}" \
 		'server:string' \
 		'port:port' \
@@ -13,7 +14,8 @@ validate_pool_section() {
 		'password:string'
 }
 
-validate_miner_section() {
+validate_miner_section()
+{
 	uci_validate_section cgminer miner "${1}" \
 		'frequency:range(120,1332):1332' \
 		'voltage:range(10,15):10' \
@@ -42,7 +44,8 @@ convert_chains()
 	chains="$res"
 }
 
-start_service() {
+start_service()
+{
 	local frequency voltage chains pools
 
 	validate_miner_section miner || {
@@ -67,6 +70,14 @@ start_service() {
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 	procd_close_instance
+}
+
+stop_service()
+{
+	# disable all chains and lower power consumption
+	for i in $(seq 872 877); do
+		echo 0 >/sys/class/gpio/gpio$i/value
+	done
 }
 
 service_triggers()
