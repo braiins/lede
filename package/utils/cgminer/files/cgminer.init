@@ -72,14 +72,6 @@ start_service()
 	procd_close_instance
 }
 
-stop_service()
-{
-	# disable all chains and lower power consumption
-	for i in $(seq 872 877); do
-		echo 0 >/sys/class/gpio/gpio$i/value
-	done
-}
-
 service_triggers()
 {
 	procd_add_reload_trigger "cgminer"
