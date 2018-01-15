@@ -65,6 +65,7 @@ start_service()
 	done
 	procd_append_param command --A1Vol $voltage
 	[ -n "$chains" ] && procd_append_param command --enabled-chains "$chains"
+	procd_append_param command --api-listen --api-allow W:127.0.0.1
 	procd_set_param respawn ${respawn_threshold:-3600} ${respawn_timeout:-5} ${respawn_retry:-0}
 	# forward stdout and stderr to logd
 	procd_set_param stdout 0
