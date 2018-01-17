@@ -67,6 +67,8 @@ function Monitor:add_sample(devs)
 		for _, dev in ipairs(value.DEVS) do
 			local chain = {}
 			chain.id = dev.ID
+			chain.temp = dev["TempAVG"]
+			chain.errs = dev["Hardware Errors"]
 			chain.mhs = {}
 			for _, unit in ipairs({"5s", "1m", "5m", "15m"}) do
 				table.insert(chain.mhs, dev["MHS "..unit])
