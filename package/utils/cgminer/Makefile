@@ -62,6 +62,7 @@ endef
 define Package/cgminer/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/cgminer $(1)/usr/bin/cgminer
+	$(INSTALL_BIN) ./files/cgminer-shutdown.sh $(1)/usr/bin/cgminer-shutdown.sh
 
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/cgminer.config $(1)/etc/config/cgminer
