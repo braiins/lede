@@ -11,13 +11,24 @@ local SERVER_PORT = 4029
 
 local HISTORY_SIZE = 60
 
+local CHAINS = 6
+local SAMPLE_TIME = 1
+local MHS = {60, 300, 900}
+
 -- class declarations
 local History = {}
 History.__index = History
 
+local RollingAverage = {}
+RollingAverage.__index = RollingAverage
+
+local CGMinerDevs = {}
+CGMinerDevs.__index = CGMinerDevs
+
 local Monitor = {}
 Monitor.__index = Monitor
 
+-- History class
 function History.new(max_size)
 	local self = setmetatable({}, History)
 	self.max_size = max_size
@@ -46,35 +57,110 @@ function History:values()
 	end
 end
 
+-- RollingAverage class
+function RollingAverage.new(interval)
+	local self = setmetatable({}, RollingAverage)
+	self.interval = interval
+	self.time = 0
+	self.value = 0
+	return self
+end
+
+function RollingAverage:add(value, time)
+	local dt = time - self.time
+
+	if dt <= 0 then
+		return
+	end
+
+	local fprop = 1 - (1 / math.exp(dt / self.interval))
+	local ftotal = 1 + fprop
+
+	self.time = time
+	self.value = (self.value + (value / dt * fprop)) / ftotal
+end
+
+-- CGMiner class
+function CGMinerDevs.new(response)
+	local self = setmetatable({}, CGMinerDevs)
+	self.data = response and CJSON.decode(response)
+	return self
+end
+
+function CGMinerDevs:get(id)
+	if self.data then
+		for _, dev in ipairs(self.data.DEVS) do
+			if dev.ID == id then
+				return dev
+			end
+		end
+	end
+end
+
+-- Monitor class
 function Monitor.new(history_size)
 	local self = setmetatable({}, Monitor)
 	self.history = History.new(history_size)
 	self.last_time = 0
+	self.chains = {}
+	for _ = 1,CHAINS do
+		local chain = {}
+		chain.temp = 0
+		chain.errs_last = 0
+		chain.errs = 0
+		chain.mhs_cur = 0
+		chain.mhs = {}
+		for _, interval in ipairs(MHS) do
+			chain.mhs[interval] = RollingAverage.new(interval)
+		end
+		table.insert(self.chains, chain)
+	end
 	return self
 end
 
 function Monitor:sample_time()
-	return (os.time() - self.last_time) >= 1
+	return (os.time() - self.last_time) >= SAMPLE_TIME
 end
 
-function Monitor:add_sample(devs)
+function Monitor:add_sample(response)
+	local devs = CGMinerDevs.new(response)
 	local sample = {}
 	self.last_time = os.time()
 	sample.time = self.last_time
 	sample.chains = {}
-	if devs then
-		local value = CJSON.decode(devs)
-		for _, dev in ipairs(value.DEVS) do
-			local chain = {}
-			chain.id = dev.ID
+
+	for i, chain in ipairs(self.chains) do
+		local id = i - 1
+		local dev = devs:get(id)
+		if dev then
+			local errs = dev["Hardware Errors"]
 			chain.temp = dev["TempAVG"]
-			chain.errs = dev["Hardware Errors"]
-			chain.mhs = {}
-			for _, unit in ipairs({"5s", "1m", "5m", "15m"}) do
-				table.insert(chain.mhs, dev["MHS "..unit])
+			chain.errs = chain.errs + errs - chain.errs_last
+			chain.errs_last = errs
+			chain.mhs_cur = dev["MHS 5s"]
+			for _, mhs in pairs(chain.mhs) do
+				mhs:add(chain.mhs_cur, self.last_time)
 			end
-			table.insert(sample.chains, chain)
+		else
+			chain.temp = 0
+			chain.errs_last = 0
+			chain.mhs_cur = 0
+			for _, mhs in pairs(chain.mhs) do
+				mhs:add(0, self.last_time)
+			end
 		end
+		-- copy current chain values to the sample
+		local sample_chain = {}
+		sample_chain.id = id
+		sample_chain.temp = chain.temp
+		sample_chain.errs = chain.errs
+		sample_chain.mhs = {chain.mhs_cur }
+		for _, interval in ipairs(MHS) do
+			local mhs = chain.mhs[interval]
+			table.insert(sample_chain.mhs, mhs.value)
+		end
+		-- TODO: do not insert when each value is zero
+		table.insert(sample.chains, sample_chain)
 	end
 	self.history:append(sample)
 end
@@ -94,7 +180,7 @@ local server = assert(SOCKET.bind(SERVER_HOST, SERVER_PORT))
 local result
 
 -- server accept is interrupted every second to get new sample from cgminer
-server:settimeout(1)
+server:settimeout(SAMPLE_TIME)
 
 -- wait forever for incomming connections
 while 1 do
