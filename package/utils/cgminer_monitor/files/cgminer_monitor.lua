@@ -108,6 +108,8 @@ function Monitor.new(history_size)
 		chain.temp = 0
 		chain.errs_last = 0
 		chain.errs = 0
+		chain.accepted = 0
+		chain.rejected = 0
 		chain.mhs_cur = 0
 		chain.mhs = {}
 		for _, interval in ipairs(MHS) do
@@ -137,6 +139,8 @@ function Monitor:add_sample(response)
 			chain.temp = dev["TempAVG"]
 			chain.errs = chain.errs + errs - chain.errs_last
 			chain.errs_last = errs
+			chain.accepted = dev["Accepted"]
+			chain.rejected = dev["Rejected"]
 			chain.mhs_cur = dev["MHS 5s"]
 			for _, mhs in pairs(chain.mhs) do
 				mhs:add(chain.mhs_cur, self.last_time)
@@ -144,6 +148,8 @@ function Monitor:add_sample(response)
 		else
 			chain.temp = 0
 			chain.errs_last = 0
+			chain.accepted = 0
+			chain.rejected = 0
 			chain.mhs_cur = 0
 			for _, mhs in pairs(chain.mhs) do
 				mhs:add(0, self.last_time)
@@ -154,6 +160,8 @@ function Monitor:add_sample(response)
 		sample_chain.id = id
 		sample_chain.temp = chain.temp
 		sample_chain.errs = chain.errs
+		sample_chain.acpt = chain.accepted
+		sample_chain.rjct = chain.rejected
 		sample_chain.mhs = {chain.mhs_cur }
 		for _, interval in ipairs(MHS) do
 			local mhs = chain.mhs[interval]
