@@ -57,6 +57,12 @@ function History:values()
 	end
 end
 
+function History:last_value()
+	if self.size then
+		return self[self.pos]
+	end
+end
+
 -- RollingAverage class
 function RollingAverage.new(interval)
 	local self = setmetatable({}, RollingAverage)
@@ -124,11 +130,61 @@ function Monitor:sample_time()
 	return (os.time() - self.last_time) >= SAMPLE_TIME
 end
 
+function Monitor.copy_chain2sample(chain, sample, id)
+	local sample_chain = {}
+	sample_chain.id = id
+	sample_chain.temp = chain.temp
+	sample_chain.errs = chain.errs
+	sample_chain.acpt = chain.accepted
+	sample_chain.rjct = chain.rejected
+	sample_chain.mhs = {chain.mhs_cur }
+	for _, interval in ipairs(MHS) do
+		local mhs = chain.mhs[interval]
+		table.insert(sample_chain.mhs, mhs.value)
+	end
+	-- TODO: do not insert when each value is zero
+	table.insert(sample.chains, sample_chain)
+end
+
+-- interpolation is done by duplication of last values
+function Monitor:interpolate(count)
+	local last_time = self.last_time
+
+	for i = 1,count do
+		local sample = {}
+		local current_time = last_time + SAMPLE_TIME
+
+		sample.time = current_time
+		sample.chains = {}
+
+		for i, chain in ipairs(self.chains) do
+			local id = i - 1
+			-- use previous value for rolling average
+			for _, mhs in pairs(chain.mhs) do
+				mhs:add(chain.mhs_cur, current_time)
+			end
+			-- copy current chain values to the sample
+			self.copy_chain2sample(chain, sample, id)
+		end
+
+		self.history:append(sample)
+		last_time = current_time
+	end
+end
+
 function Monitor:add_sample(response)
 	local devs = CGMinerDevs.new(response)
 	local sample = {}
-	self.last_time = os.time()
-	sample.time = self.last_time
+	local current_time = os.time()
+	local time_diff = current_time - self.last_time
+
+	if (self.last_time > 0) and (time_diff > SAMPLE_TIME) then
+		-- interpolate missing samples
+		local missing_samples = math.floor((time_diff - 1) / SAMPLE_TIME)
+		self:interpolate(missing_samples)
+	end
+
+	sample.time = current_time
 	sample.chains = {}
 
 	for i, chain in ipairs(self.chains) do
@@ -142,35 +198,21 @@ function Monitor:add_sample(response)
 			chain.accepted = dev["Accepted"]
 			chain.rejected = dev["Rejected"]
 			chain.mhs_cur = dev["MHS 5s"]
-			for _, mhs in pairs(chain.mhs) do
-				mhs:add(chain.mhs_cur, self.last_time)
-			end
 		else
 			chain.temp = 0
 			chain.errs_last = 0
 			chain.accepted = 0
 			chain.rejected = 0
 			chain.mhs_cur = 0
-			for _, mhs in pairs(chain.mhs) do
-				mhs:add(0, self.last_time)
-			end
+		end
+		for _, mhs in pairs(chain.mhs) do
+			mhs:add(chain.mhs_cur, current_time)
 		end
 		-- copy current chain values to the sample
-		local sample_chain = {}
-		sample_chain.id = id
-		sample_chain.temp = chain.temp
-		sample_chain.errs = chain.errs
-		sample_chain.acpt = chain.accepted
-		sample_chain.rjct = chain.rejected
-		sample_chain.mhs = {chain.mhs_cur }
-		for _, interval in ipairs(MHS) do
-			local mhs = chain.mhs[interval]
-			table.insert(sample_chain.mhs, mhs.value)
-		end
-		-- TODO: do not insert when each value is zero
-		table.insert(sample.chains, sample_chain)
+		self.copy_chain2sample(chain, sample, id)
 	end
 	self.history:append(sample)
+	self.last_time = current_time
 end
 
 function Monitor:get_response()
