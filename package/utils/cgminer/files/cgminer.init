@@ -50,10 +50,8 @@ start_service()
 	local frequency voltage chains pools
 
 	[ ! -f "$HWID" ] && {
-		# NOTE: we use /dev/urandom here instead of /dev/random,
-		# because /dev/random might stall boot until enough
-		# entropy is harvested.
-		dd if=/dev/urandom "of=$HWID" bs=8 count=1 2>/dev/null
+		logger -t cgminer "Generating random hwid for cgminer"
+		dd if=/dev/random bs=1 count=12 2>/dev/null | base64 > "$HWID"
 	}
 
 	validate_miner_section miner || {
