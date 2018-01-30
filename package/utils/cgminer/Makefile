@@ -6,15 +6,13 @@ PKG_RELEASE:=1
 
 PKG_MAINTAINER:=Libor Vasicek <libor.vasicek@braiins.cz>
 
-# define here USE_SOURCE_DIR variable with absolute path to local source directory
-# when you need to develop cgminer
-# USE_SOURCE_DIR:=/path/to/source/directory
-ifdef USE_SOURCE_DIR
-	PKG_SOURCE_VERSION:=local
-else
+ifeq ($(strip $(CONFIG_EXTERNAL_CGMINER_TREE)),"")
 	PKG_SOURCE_PROTO:=git
 	PKG_SOURCE_URL:=git@gitlab.bo:x/cgminer.git
 	PKG_SOURCE_VERSION:=braiins-old-spi
+else
+	PKG_SOURCE_VERSION:=local
+    USE_SOURCE_DIR:=$(call qstrip,$(CONFIG_EXTERNAL_CGMINER_TREE))
 endif
 
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_SOURCE_VERSION)
@@ -34,6 +32,10 @@ endef
 
 define Package/cgminer/description
  Multi-threaded multi-pool FPGA and ASIC miner for bitcoin.
+endef
+
+define Package/cgminer/config
+	source "$(SOURCE)/Config.in"
 endef
 
 CPGEN_CONFIGURE:= \
