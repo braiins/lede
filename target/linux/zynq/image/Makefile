@@ -32,7 +32,8 @@ define Build/fit
 	./mkits.sh \
 		-D $(DEVICE_ID) -o $@.its -k $(IMAGE_KERNEL) -d $(IMAGE_KERNEL).dtb \
 		-C none -a $(KERNEL_LOADADDR) -e $(KERNEL_ENTRY) \
-		-A $(ARCH) -v $(LINUX_VERSION) -r $(IMAGE_ROOTFS) -z $(IMAGE_ROOTFS_COMP)
+		-A $(ARCH) -v $(LINUX_VERSION) \
+		$(if $(IMAGE_ROOTFS_COMP),-r $(IMAGE_ROOTFS) -z $(IMAGE_ROOTFS_COMP))
 
 	PATH=$(LINUX_DIR)/scripts/dtc:$(PATH) mkimage -f $@.its $@
 endef
@@ -78,13 +79,23 @@ define Device/zybo
 endef
 TARGET_DEVICES += zybo
 
-define Device/miner
-	DEVICE_TITLE := Miner Controller Board
+define Device/miner-sd
+	DEVICE_TITLE := Miner Controller Board (SD)
 	DEVICE_ID := miner
 	IMAGES := fit.itb
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP := none
 endef
-TARGET_DEVICES += miner
+TARGET_DEVICES += miner-sd
+
+define Device/miner-nand
+	DEVICE_TITLE := Miner Controller Board (NAND)
+	DEVICE_ID := miner
+	IMAGES := fit.itb rootfs.bin
+	IMAGE/rootfs.bin := append-rootfs
+	FILESYSTEMS := squashfs
+	IMAGE_ROOTFS_COMP :=
+endef
+TARGET_DEVICES += miner-nand
 
 $(eval $(call BuildImage))
