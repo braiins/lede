@@ -1,14 +1,15 @@
 --- a/include/configs/zynq-common.h
 +++ b/include/configs/zynq-common.h
-@@ -191,6 +191,7 @@
- #define CONFIG_ENV_OVERWRITE
+@@ -203,7 +203,7 @@
+ # endif
  
- /* Environment */
-+#define CONFIG_ENV_IS_NOWHERE
- #ifndef CONFIG_ENV_IS_NOWHERE
- # ifndef CONFIG_SYS_NO_FLASH
- /* Environment in NOR flash */
-@@ -218,7 +219,18 @@
+ # define CONFIG_ENV_SECT_SIZE		CONFIG_ENV_SIZE
+-# define CONFIG_ENV_OFFSET		0xE0000
++# define CONFIG_ENV_OFFSET		0x400000
+ #endif
+ 
+ /* Default environment */
+@@ -218,7 +218,18 @@
  	"norboot=echo Copying FIT from NOR flash to RAM... && " \
  		"cp.b ${nor_flash_off} ${load_addr} ${fit_size} && " \
  		"bootm ${load_addr}\0" \
@@ -27,7 +28,7 @@
  		"load mmc 0 ${load_addr} ${fit_image} && " \
  		"bootm ${load_addr}\0" \
  	"jtagboot=echo TFTPing FIT to RAM... && " \
-@@ -231,7 +243,7 @@
+@@ -231,7 +242,7 @@
  		DFU_ALT_INFO
  
  #define CONFIG_BOOTCOMMAND		"run $modeboot"

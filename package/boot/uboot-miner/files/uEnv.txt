@@ -1,2 +1,0 @@
-bootargs=console=ttyPS0,115200 root=/dev/ram0 r rootfstype=squashfs earlyprintk
-ethaddr=00:0A:35:FF:FF:FF

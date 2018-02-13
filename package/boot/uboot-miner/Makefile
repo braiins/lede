@@ -30,13 +30,19 @@ define uboot/Default
 	IMAGE:=
 endef
 
-define uboot/miner
-	TITLE:=U-Boot $(PKG_VERSION) for Xilinx ZC702 Dev Board
-	CONFIG:=zc702
+define uboot/miner-sd
+	TITLE:=U-Boot $(PKG_VERSION) for Xilinx ZC702 Dev Board (SD)
+	CONFIG:=miner_sd
+endef
+
+define uboot/miner-nand
+	TITLE:=U-Boot $(PKG_VERSION) for Xilinx ZC702 Dev Board (NAND)
+	CONFIG:=miner_nand
 endef
 
 UBOOTS := \
-	miner \
+	miner-sd \
+	miner-nand
 
 define Package/uboot/template
 define Package/uboot-zynq-$(1)
@@ -64,7 +70,6 @@ endif
 
 define Build/Configure
 	+$(MAKE) $(PKG_JOBS) -C $(PKG_BUILD_DIR) \
-		OF_EMBED=yes \
 		$(BOARD)_$(UBOOT_CONFIG)_config DTC=$(LINUX_DIR)/scripts/dtc/dtc
 endef
 
@@ -83,8 +88,6 @@ define Package/uboot/install/default
 	$(INSTALL_DIR) $(BIN_DIR)/uboot-$(BOARD)-$(1)
 
 	$(CP) $(PKG_BUILD_DIR)/BOOT.bin \
-		$(BIN_DIR)/uboot-$(BOARD)-$(1)
-	$(CP) ./files/uEnv.txt \
 		$(BIN_DIR)/uboot-$(BOARD)-$(1)
 endef
 
