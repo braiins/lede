@@ -1323,7 +1323,7 @@
  # Enhance depends when converting drivers to Kconfig which use this config
 --- a/configs/zynq_zc702_defconfig
 +++ b/configs/zynq_zc702_defconfig
-@@ -14,6 +14,7 @@ CONFIG_OF_EMBED=y
+@@ -13,6 +13,7 @@ CONFIG_CMD_GPIO=y
  CONFIG_NET_RANDOM_ETHADDR=y
  CONFIG_SPL_DM_SEQ_ALIAS=y
  CONFIG_ZYNQ_SDHCI=y

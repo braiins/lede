@@ -1,6 +1,6 @@
 --- a/include/configs/zynq-common.h
 +++ b/include/configs/zynq-common.h
-@@ -203,7 +203,7 @@
+@@ -216,7 +216,7 @@
  # endif
  
  # define CONFIG_ENV_SECT_SIZE		CONFIG_ENV_SIZE
@@ -9,7 +9,7 @@
  #endif
  
  /* Default environment */
-@@ -218,7 +218,18 @@
+@@ -231,7 +231,18 @@
  	"norboot=echo Copying FIT from NOR flash to RAM... && " \
  		"cp.b ${nor_flash_off} ${load_addr} ${fit_size} && " \
  		"bootm ${load_addr}\0" \
@@ -28,7 +28,7 @@
  		"load mmc 0 ${load_addr} ${fit_image} && " \
  		"bootm ${load_addr}\0" \
  	"jtagboot=echo TFTPing FIT to RAM... && " \
-@@ -231,7 +242,7 @@
+@@ -244,7 +255,7 @@
  		DFU_ALT_INFO
  
  #define CONFIG_BOOTCOMMAND		"run $modeboot"
