@@ -1381,34 +1381,31 @@
  		ARRAY_SIZE(usb0_pins),
 --- a/board/xilinx/zynq/board.c
 +++ b/board/xilinx/zynq/board.c
-@@ -72,19 +72,18 @@ int board_init(void)
+@@ -72,14 +72,27 @@ int board_init(void)
  
  int board_late_init(void)
  {
--	switch ((zynq_slcr_get_boot_mode()) & ZYNQ_BM_MASK) {
--	case ZYNQ_BM_NOR:
--		setenv("modeboot", "norboot");
--		break;
--	case ZYNQ_BM_SD:
-+	struct mmc *mmc = NULL;
++	puts("Boot:  ");
 +
-+	mmc = find_mmc_device(0);
-+	if (0 == mmc_init(mmc))	/* sd */
-+	{
-+		puts("Boot:  SD\n");
- 		setenv("modeboot", "sdboot");
--		break;
--	case ZYNQ_BM_JTAG:
--		setenv("modeboot", "jtagboot");
--		break;
--	default:
--		setenv("modeboot", "");
--		break;
-+	}
-+	else					/* nand */
-+	{
-+		puts("Boot:  NAND\n");
+ 	switch ((zynq_slcr_get_boot_mode()) & ZYNQ_BM_MASK) {
++	case ZYNQ_BM_QSPI:
++		puts("QSPI\n");
++		setenv("modeboot", "qspiboot");
++		break;
++	case ZYNQ_BM_NAND:
++		puts("NAND\n");
 +		setenv("modeboot", "nandboot");
- 	}
- 
- 	return 0;
++		break;
+ 	case ZYNQ_BM_NOR:
++		puts("NOR\n");
+ 		setenv("modeboot", "norboot");
+ 		break;
+ 	case ZYNQ_BM_SD:
++		puts("SD\n");
+ 		setenv("modeboot", "sdboot");
+ 		break;
+ 	case ZYNQ_BM_JTAG:
++		puts("JTAG\n");
+ 		setenv("modeboot", "jtagboot");
+ 		break;
+ 	default:
