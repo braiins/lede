@@ -1,6 +1,6 @@
 --- a/include/configs/zynq-common.h
 +++ b/include/configs/zynq-common.h
-@@ -216,35 +216,62 @@
+@@ -216,35 +216,79 @@
  # endif
  
  # define CONFIG_ENV_SECT_SIZE		CONFIG_ENV_SIZE
@@ -19,9 +19,15 @@
 +		"4m(BOOT.bin)," \
 +		"512k(uboot_env)," \
 +		"512k(miner_cfg)," \
-+		"6m(kernel)," \
-+		"45m(rootfs)," \
-+		"-(rootfs_data)"
++		"15m(recovery)," \
++		"100m(firmware1)," \
++		"100m(firmware2)"
++
++/* UBI support */
++#define CONFIG_CMD_UBI
++#define CONFIG_CMD_UBIFS
++#define CONFIG_RBTREE
++#define CONFIG_LZO
 +
  /* Default environment */
 -#define CONFIG_EXTRA_ENV_SETTINGS	\
@@ -35,19 +41,30 @@
 -	"norboot=echo Copying FIT from NOR flash to RAM... && " \
 -		"cp.b ${nor_flash_off} ${load_addr} ${fit_size} && " \
 +#define CONFIG_EXTRA_ENV_SETTINGS \
++	"firmware=1\0" \
 +	"load_addr=0x2000000\0" \
 +	"miner_cfg_size=0x10000\0" \
++	"select_firmware=" \
++		"if test $firmware = 1; then " \
++			"setenv firmware_name firmware1 && " \
++			"setenv firmware_mtd 4; " \
++		"else " \
++			"setenv firmware_name firmware2 && " \
++			"setenv firmware_mtd 5; " \
++		"fi\0" \
 +	"nandboot_init=echo Reseting miner configuration... && " \
 +		"env default -a && " \
 +		"nand read ${load_addr} miner_cfg ${miner_cfg_size} && " \
 +		"env import -c ${load_addr} ${miner_cfg_size} && " \
-+		"env set nandboot ${nandboot_default} && " \
++		"env set nandboot \"${nandboot_default}\" && " \
 +		"env delete nandboot_init nandboot_default && " \
 +		"saveenv && " \
 +		"reset\0" \
 +	"nandboot_default=echo Copying FIT from NAND flash to RAM... && " \
-+		"setenv bootargs console=ttyPS0,115200 noinitrd root=/dev/mtdblock4 r rootfstype=squashfs rootwait ${mtdparts} earlyprintk && " \
-+		"nand read ${load_addr} kernel && " \
++		"run select_firmware && " \
++		"setenv bootargs console=ttyPS0,115200 noinitrd ubi.mtd=${firmware_mtd} ubi.block=0,1 root=/dev/ubiblock0_1 r rootfstype=squashfs rootwait ${mtdparts} earlyprintk && " \
++		"ubi part ${firmware_name} && " \
++		"ubi read ${load_addr} kernel && " \
  		"bootm ${load_addr}\0" \
 +	"nandboot=run nandboot_init\0" \
 +	"fit_image=fit.itb\0" \
