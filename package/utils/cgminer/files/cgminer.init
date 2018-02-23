@@ -50,8 +50,8 @@ start_service()
 	local frequency voltage chains pools
 
 	[ ! -f "$HWID" ] && {
-		logger -t cgminer "Generating random hwid for cgminer"
-		dd if=/dev/random bs=1 count=12 2>/dev/null | base64 > "$HWID"
+		logger -t cgminer "Generating '$HWID' for cgminer"
+		fw_printenv -n miner_hwid > "$HWID"
 	}
 
 	validate_miner_section miner || {
