@@ -96,6 +96,7 @@ define Device/miner-nand
 	IMAGES := factory.bin sysupgrade.tar
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP :=
+	SUPPORTED_DEVICES := miner-nand
 endef
 TARGET_DEVICES += miner-nand
 
