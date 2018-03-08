@@ -88,6 +88,15 @@ define Device/miner-sd
 endef
 TARGET_DEVICES += miner-sd
 
+define Device/miner-g19-sd
+	DEVICE_TITLE := Miner Controller Board G19 (SD)
+	DEVICE_DTS := zynq-miner-g19
+	IMAGES := fit.itb
+	FILESYSTEMS := squashfs
+	IMAGE_ROOTFS_COMP := none
+endef
+TARGET_DEVICES += miner-g19-sd
+
 define Device/miner-nand
 	DEVICE_TITLE := Miner Controller Board (NAND)
 	DEVICE_DTS := zynq-miner
