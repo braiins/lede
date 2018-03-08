@@ -1,6 +1,17 @@
 --- a/include/configs/zynq-common.h
 +++ b/include/configs/zynq-common.h
-@@ -216,35 +216,79 @@
+@@ -170,6 +170,10 @@
+ # define CONFIG_SYS_NAND_SELF_INIT
+ # define CONFIG_SYS_NAND_ONFI_DETECTION
+ # define CONFIG_MTD_DEVICE
++# define CONFIG_SPL_NAND_SUPPORT
++# define CONFIG_SPL_NAND_DRIVERS
++# define CONFIG_SPL_NAND_BOOT
++# define CONFIG_SYS_NAND_U_BOOT_OFFS	0x00080000
+ #endif
+ 
+ #if defined(CONFIG_ZYNQ_I2C0) || defined(CONFIG_ZYNQ_I2C1)
+@@ -216,35 +220,84 @@
  # endif
  
  # define CONFIG_ENV_SECT_SIZE		CONFIG_ENV_SIZE
@@ -16,7 +27,9 @@
 +	"nand0=pl35x-nand"
 +#define MTDPARTS_DEFAULT \
 +	"mtdparts=pl35x-nand:" \
-+		"4m(BOOT.bin)," \
++		"512k(boot)," \
++		"1536k(uboot)," \
++		"2m(system)," \
 +		"512k(uboot_env)," \
 +		"512k(miner_cfg)," \
 +		"15m(recovery)," \
@@ -47,10 +60,10 @@
 +	"select_firmware=" \
 +		"if test $firmware = 1; then " \
 +			"setenv firmware_name firmware1 && " \
-+			"setenv firmware_mtd 4; " \
++			"setenv firmware_mtd 6; " \
 +		"else " \
 +			"setenv firmware_name firmware2 && " \
-+			"setenv firmware_mtd 5; " \
++			"setenv firmware_mtd 7; " \
 +		"fi\0" \
 +	"nandboot_init=echo Reseting miner configuration... && " \
 +		"env default -a && " \
@@ -68,6 +81,7 @@
  		"bootm ${load_addr}\0" \
 +	"nandboot=run nandboot_init\0" \
 +	"fit_image=fit.itb\0" \
++	"fpga_image=system.bit\0" \
 +	"bootenv=uEnv.txt\0" \
 +	"load_bootenv=load mmc 0 ${load_addr} ${bootenv}\0" \
  	"sdboot=echo Copying FIT from SD to RAM... && " \
@@ -80,6 +94,8 @@
 +			"echo Running uenvcmd... && " \
 +			"run uenvcmd; " \
 +		"fi; " \
++		"load mmc 0 ${load_addr} ${fpga_image} && " \
++		"fpga loadb 0 ${load_addr} ${filesize} && " \
  		"load mmc 0 ${load_addr} ${fit_image} && " \
  		"bootm ${load_addr}\0" \
 -	"jtagboot=echo TFTPing FIT to RAM... && " \
@@ -100,3 +116,12 @@
  #define CONFIG_SYS_LOAD_ADDR		0 /* default? */
  
  /* Miscellaneous configurable options */
+@@ -366,7 +419,7 @@
+ #endif
+ 
+ /* for booting directly linux */
+-#define CONFIG_SPL_OS_BOOT
++/* #define CONFIG_SPL_OS_BOOT */
+ 
+ /* SP location before relocation, must use scratch RAM */
+ #define CONFIG_SPL_TEXT_BASE	0x0

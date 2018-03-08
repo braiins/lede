@@ -10,10 +10,16 @@ include $(INCLUDE_DIR)/image.mk
 
 PKG_NAME:=u-boot
 PKG_VERSION:=2016.03
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:= \
-	http://mirror2.openwrt.org/sources \
-	ftp://ftp.denx.de/pub/u-boot
+
+ifeq ($(strip $(CONFIG_EXTERNAL_UBOOT_TREE)),"")
+	PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
+	PKG_SOURCE_URL:= \
+		http://mirror2.openwrt.org/sources \
+		ftp://ftp.denx.de/pub/u-boot
+else
+	PKG_SOURCE_VERSION:=local
+    USE_SOURCE_DIR:=$(call qstrip,$(CONFIG_EXTERNAL_UBOOT_TREE))
+endif
 
 PKG_HASH:=e49337262ecac44dbdeac140f2c6ebd1eba345e0162b0464172e7f05583ed7bb
 
@@ -43,6 +49,10 @@ endef
 UBOOTS := \
 	miner-sd \
 	miner-nand
+
+define Package/uboot-zynq-miner-sd/config
+	source "$(SOURCE)/Config.in"
+endef
 
 define Package/uboot/template
 define Package/uboot-zynq-$(1)
@@ -76,18 +86,14 @@ endef
 define Build/Compile
 	+$(MAKE) $(PKG_JOBS) -C $(PKG_BUILD_DIR) \
 		CROSS_COMPILE=$(TARGET_CROSS)
-	+$(TARGET_CROSS)strip $(PKG_BUILD_DIR)/u-boot -o $(PKG_BUILD_DIR)/u-boot.elf
-	+$(CP) ./files/fsbl.elf $(PKG_BUILD_DIR)
-	+$(CP) ./files/system.bit $(PKG_BUILD_DIR)
-	+echo "the_ROM_image:{[bootloader]./files/fsbl.elf ./files/system.bit $(PKG_BUILD_DIR)/u-boot.elf}" \
-		>$(PKG_BUILD_DIR)/BOOT.bif
-	+bootgen -image $(PKG_BUILD_DIR)/BOOT.bif -arch zynq -w -o $(PKG_BUILD_DIR)/BOOT.bin
 endef
 
 define Package/uboot/install/default
 	$(INSTALL_DIR) $(BIN_DIR)/uboot-$(BOARD)-$(1)
 
-	$(CP) $(PKG_BUILD_DIR)/BOOT.bin \
+	$(CP) $(PKG_BUILD_DIR)/spl/boot.bin \
+		$(BIN_DIR)/uboot-$(BOARD)-$(1)
+	$(CP) $(PKG_BUILD_DIR)/u-boot.img \
 		$(BIN_DIR)/uboot-$(BOARD)-$(1)
 endef
 
