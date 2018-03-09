@@ -4,7 +4,7 @@ START=99
 
 USE_PROCD=1
 PROG=/usr/bin/cgminer
-HWID=/etc/miner_hwid
+HWID=/tmp/miner_hwid
 
 validate_pool_section()
 {
