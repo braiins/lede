@@ -1,0 +1,14 @@
+#!/bin/sh
+
+. /lib/zynq.sh
+
+preinit_set_environment() {
+	case $(zynq_board_name) in
+		miner-nand)
+			fw_printenv -n miner_hwid > "/tmp/miner_hwid"
+			fw_printenv -n miner_hwver > "/tmp/miner_hwver"
+			;;
+	esac
+}
+
+boot_hook_add preinit_main preinit_set_environment
