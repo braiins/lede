@@ -6,6 +6,12 @@ RAMFS_COPY_DATA="/etc/fw_env.config /var/lock/fw_printenv.lock"
 zynq_get_firmware_partition() {
 	cur_firmware=$(fw_printenv -n firmware)
 	partition_name=""
+
+	# set upgrade stage to 0 to inform U-Boot that upgrade process has been
+	# started; when first boot after upgrade is not successful then U-Boot
+	# reverts firmware to previous one
+	fw_setenv upgrade_stage 0
+
 	if [ x"$cur_firmware" = x"2" ]; then
 		partition_name="firmware1"
 		fw_setenv firmware 1

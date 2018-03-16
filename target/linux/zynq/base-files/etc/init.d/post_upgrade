@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+
+START=96
+start() {
+	. /lib/zynq.sh
+	case $(zynq_board_name) in
+		miner-nand)
+			# after successful upgrade delete environment variable to suppress
+			# U-Boot auto-recovery process
+			fw_setenv upgrade_stage
+			;;
+	esac
+}
