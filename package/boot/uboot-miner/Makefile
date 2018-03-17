@@ -36,21 +36,31 @@ define uboot/Default
 	IMAGE:=
 endef
 
-define uboot/miner-sd
-	TITLE:=U-Boot $(PKG_VERSION) for Xilinx ZC702 Dev Board (SD)
-	CONFIG:=miner_sd
+define uboot/dm1-g9-sd
+	TITLE:=U-Boot $(PKG_VERSION) for DragonMint T1/G9 Miner Control Board (SD)
+	CONFIG:=dm1_g9_sd
 endef
+UBOOTS += dm1-g9-sd
 
-define uboot/miner-nand
-	TITLE:=U-Boot $(PKG_VERSION) for Xilinx ZC702 Dev Board (NAND)
-	CONFIG:=miner_nand
+define uboot/dm1-g19-sd
+	TITLE:=U-Boot $(PKG_VERSION) for DragonMint T1/G19 Miner Control Board (SD)
+	CONFIG:=dm1_g19_sd
 endef
+UBOOTS += dm1-g19-sd
 
-UBOOTS := \
-	miner-sd \
-	miner-nand
+define uboot/dm1-g9
+	TITLE:=U-Boot $(PKG_VERSION) for DragonMint T1/G9 Miner Control Board
+	CONFIG:=dm1_g9
+endef
+UBOOTS += dm1-g9
 
-define Package/uboot-zynq-miner-sd/config
+define uboot/dm1-g19
+	TITLE:=U-Boot $(PKG_VERSION) for DragonMint T1/G19 Miner Control Board
+	CONFIG:=dm1_g19
+endef
+UBOOTS += dm1-g19
+
+define Package/uboot-zynq-dm1-g9-sd/config
 	source "$(SOURCE)/Config.in"
 endef
 
@@ -62,7 +72,7 @@ define Package/uboot-zynq-$(1)
 	TITLE:=$(2)
 	URL:=http://www.denx.de/wiki/U-Boot
 	VARIANT:=$(1)
-	MAINTAINER:=Jason Wu <jason.wu.misc@gmail.com>
+	MAINTAINER:=Libor Vasicek <libor.vasicek@braiins.cz>
 endef
 endef
 
