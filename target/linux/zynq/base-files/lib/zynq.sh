@@ -14,8 +14,11 @@ zynq_board_detect() {
 	machine=$(cat /proc/device-tree/model)
 
 	case "$machine" in
-	*"Zynq ZC702 Miner Control Board")
-		name="miner-nand"
+	*"DragonMint T1/G9 Miner Control Board")
+		name="dm1-g9"
+		;;
+	*"DragonMint T1/G19 Miner Control Board")
+		name="dm1-g19"
 		;;
 	esac
 

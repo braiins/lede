@@ -79,34 +79,46 @@ define Device/zybo
 endef
 TARGET_DEVICES += zybo
 
-define Device/miner-sd
-	DEVICE_TITLE := Miner Controller Board (SD)
-	DEVICE_DTS := zynq-miner
+define Device/dm1-g9-sd
+	DEVICE_TITLE := DragonMint T1/G9 Miner Control Board (SD)
+	DEVICE_DTS := zynq-dm1-g9
 	IMAGES := fit.itb
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP := none
 endef
-TARGET_DEVICES += miner-sd
+TARGET_DEVICES += dm1-g9-sd
 
-define Device/miner-g19-sd
-	DEVICE_TITLE := Miner Controller Board G19 (SD)
-	DEVICE_DTS := zynq-miner-g19
+define Device/dm1-g19-sd
+	DEVICE_TITLE := DragonMint T1/G19 Miner Control Board (SD)
+	DEVICE_DTS := zynq-dm1-g19
 	IMAGES := fit.itb
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP := none
 endef
-TARGET_DEVICES += miner-g19-sd
+TARGET_DEVICES += dm1-g19-sd
 
-define Device/miner-nand
-	DEVICE_TITLE := Miner Controller Board (NAND)
-	DEVICE_DTS := zynq-miner
+define Device/dm1-g9
+	DEVICE_TITLE := DragonMint T1/G9 Miner Control Board
+	DEVICE_DTS := zynq-dm1-g9
 	KERNEL_SUFFIX := -fit.itb
 	KERNEL = kernel-bin | fit
 	IMAGES := factory.bin sysupgrade.tar
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP :=
-	SUPPORTED_DEVICES := miner-nand
+	SUPPORTED_DEVICES := dm1-g9
 endef
-TARGET_DEVICES += miner-nand
+TARGET_DEVICES += dm1-g9
+
+define Device/dm1-g19
+	DEVICE_TITLE := DragonMint T1/G19 Miner Control Board
+	DEVICE_DTS := zynq-dm1-g19
+	KERNEL_SUFFIX := -fit.itb
+	KERNEL = kernel-bin | fit
+	IMAGES := factory.bin sysupgrade.tar
+	FILESYSTEMS := squashfs
+	IMAGE_ROOTFS_COMP :=
+	SUPPORTED_DEVICES := dm1-g19
+endef
+TARGET_DEVICES += dm1-g19
 
 $(eval $(call BuildImage))
