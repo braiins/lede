@@ -1,0 +1,180 @@
+--- a/block.c
++++ b/block.c
+@@ -1119,50 +1119,6 @@ static int find_block_ubi(libubi_t libub
+ 	return err;
+ }
+ 
+-static int find_block_ubi_RO(libubi_t libubi, char *name, char *part, int plen)
+-{
+-	int dev_num;
+-	int vol_id;
+-	int err = -1;
+-
+-	err = find_ubi_vol(libubi, name, &dev_num, &vol_id);
+-	if (!err)
+-		snprintf(part, plen, "/dev/ubiblock%d_%d", dev_num, vol_id);
+-
+-	return err;
+-}
+-
+-#else
+-
+-static int find_root_dev(char *buf, int len)
+-{
+-	DIR *d;
+-	dev_t root;
+-	struct stat s;
+-	struct dirent *e;
+-
+-	if (stat("/", &s))
+-		return -1;
+-
+-	if (!(d = opendir("/dev")))
+-		return -1;
+-
+-	root = s.st_dev;
+-
+-	while ((e = readdir(d)) != NULL) {
+-		snprintf(buf, len, "/dev/%s", e->d_name);
+-
+-		if (stat(buf, &s) || s.st_rdev != root)
+-			continue;
+-
+-		closedir(d);
+-		return 0;
+-	}
+-
+-	closedir(d);
+-	return -1;
+-}
+-
+ #endif
+ 
+ static int test_fs_support(const char *name)
+@@ -1189,81 +1145,6 @@ static int test_fs_support(const char *n
+ 	return rv;
+ }
+ 
+-static int check_extroot(char *path)
+-{
+-	struct probe_info *pr = NULL;
+-	char devpath[32];
+-
+-#ifdef UBIFS_EXTROOT
+-	if (find_block_mtd("\"rootfs\"", devpath, sizeof(devpath))) {
+-		int err = -1;
+-		libubi_t libubi;
+-
+-		libubi = libubi_open();
+-		err = find_block_ubi_RO(libubi, "rootfs", devpath, sizeof(devpath));
+-		libubi_close(libubi);
+-		if (err)
+-			return -1;
+-	}
+-#else
+-	if (find_block_mtd("\"rootfs\"", devpath, sizeof(devpath))) {
+-		if (find_root_dev(devpath, sizeof(devpath))) {
+-			ULOG_ERR("extroot: unable to determine root device\n");
+-			return -1;
+-		}
+-	}
+-#endif
+-
+-	list_for_each_entry(pr, &devices, list) {
+-		if (!strcmp(pr->dev, devpath)) {
+-			struct stat s;
+-			FILE *fp = NULL;
+-			char tag[64];
+-			char uuid[64] = { 0 };
+-
+-			snprintf(tag, sizeof(tag), "%s/etc", path);
+-			if (stat(tag, &s))
+-				mkdir_p(tag);
+-
+-			snprintf(tag, sizeof(tag), "%s/etc/.extroot-uuid", path);
+-			if (stat(tag, &s)) {
+-				fp = fopen(tag, "w+");
+-				if (!fp) {
+-					ULOG_ERR("extroot: failed to write UUID to %s: %d (%s)\n",
+-					         tag, errno, strerror(errno));
+-					/* return 0 to continue boot regardless of error */
+-					return 0;
+-				}
+-				fputs(pr->uuid, fp);
+-				fclose(fp);
+-				return 0;
+-			}
+-
+-			fp = fopen(tag, "r");
+-			if (!fp) {
+-				ULOG_ERR("extroot: failed to read UUID from %s: %d (%s)\n",
+-				         tag, errno, strerror(errno));
+-				return -1;
+-			}
+-
+-			if (!fgets(uuid, sizeof(uuid), fp))
+-				ULOG_ERR("extroot: failed to read UUID from %s: %d (%s)\n",
+-				         tag, errno, strerror(errno));
+-			fclose(fp);
+-
+-			if (*uuid && !strcasecmp(uuid, pr->uuid))
+-				return 0;
+-
+-			ULOG_ERR("extroot: UUID mismatch (root: %s, %s: %s)\n",
+-			         pr->uuid, basename(path), uuid);
+-			return -1;
+-		}
+-	}
+-
+-	ULOG_ERR("extroot: unable to lookup root device %s\n", devpath);
+-	return -1;
+-}
+-
+ /*
+  * Read info about extroot from UCI (using prefix) and mount it.
+  */
+@@ -1327,10 +1208,6 @@ static int mount_extroot(char *cfg)
+ 		if (err) {
+ 			ULOG_ERR("extroot: mounting %s (%s) on %s failed: %d (%s)\n",
+ 			         pr->dev, pr->type, path, errno, strerror(errno));
+-		} else if (m->overlay) {
+-			err = check_extroot(path);
+-			if (err)
+-				umount(path);
+ 		}
+ 	} else {
+ 		ULOG_ERR("extroot: cannot find device %s%s\n",
+--- a/mount_root.c
++++ b/mount_root.c
+@@ -44,23 +44,18 @@ start(int argc, char *argv[1])
+ 		mount("/dev/root", "/", NULL, MS_NOATIME | MS_REMOUNT, 0);
+ 	}
+ 
+-	/*
+-	 * Before trying to mount and use "rootfs_data" let's check if there is
+-	 * extroot configured. Following call will handle reading config from
+-	 * the "rootfs_data" on its own.
+-	 */
+-	extroot_prefix = "";
+-	if (!mount_extroot()) {
+-		ULOG_NOTE("switched to extroot\n");
+-		return 0;
+-	}
+-
+ 	/* There isn't extroot, so just try to mount "rootfs_data" */
+ 	volume_init(data);
+ 	switch (volume_identify(data)) {
+ 	case FS_NONE:
+-		ULOG_WARN("no usable overlay filesystem found, using tmpfs overlay\n");
+-		return ramoverlay();
++		extroot_prefix = "";
++		if (!mount_extroot()) {
++			ULOG_NOTE("switched to extroot\n");
++			return 0;
++		} else {
++			ULOG_WARN("no usable overlay filesystem found, using tmpfs overlay\n");
++			return ramoverlay();
++		}
+ 
+ 	case FS_DEADCODE:
+ 		/*
