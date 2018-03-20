@@ -7,7 +7,6 @@ preinit_set_environment() {
 		dm1-g9|\
 		dm1-g19)
 			fw_printenv -n miner_hwid > "/tmp/miner_hwid"
-			fw_printenv -n miner_hwver > "/tmp/miner_hwver"
 			;;
 	esac
 }
