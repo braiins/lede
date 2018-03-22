@@ -2,6 +2,7 @@
 
 local CJSON = require "cjson"
 local SOCKET = require "socket"
+local NX = require "nixio"
 
 local CGMINER_HOST = "127.0.0.1"
 local CGMINER_PORT = 4028
@@ -27,6 +28,10 @@ CGMinerDevs.__index = CGMinerDevs
 
 local Monitor = {}
 Monitor.__index = Monitor
+
+function get_uptime()
+	return NX.sysinfo()['uptime']
+end
 
 -- History class
 function History.new(max_size)
@@ -127,7 +132,8 @@ function Monitor.new(history_size)
 end
 
 function Monitor:sample_time()
-	return (os.time() - self.last_time) >= SAMPLE_TIME
+	local time_diff = get_uptime() - self.last_time
+	return math.abs(time_diff) >= SAMPLE_TIME
 end
 
 function Monitor.copy_chain2sample(chain, sample, id)
@@ -175,12 +181,13 @@ end
 function Monitor:add_sample(response)
 	local devs = CGMinerDevs.new(response)
 	local sample = {}
-	local current_time = os.time()
-	local time_diff = current_time - self.last_time
+	local current_time = get_uptime()
+	local time_diff = math.abs(current_time - self.last_time)
 
 	if (self.last_time > 0) and (time_diff > SAMPLE_TIME) then
 		-- interpolate missing samples
 		local missing_samples = math.floor((time_diff - 1) / SAMPLE_TIME)
+		missing_samples = math.min(missing_samples, HISTORY_SIZE)
 		self:interpolate(missing_samples)
 	end
 
@@ -227,21 +234,23 @@ end
 
 local monitor = Monitor.new(HISTORY_SIZE)
 local server = assert(SOCKET.bind(SERVER_HOST, SERVER_PORT))
-local result
 
 -- server accept is interrupted every second to get new sample from cgminer
 server:settimeout(SAMPLE_TIME)
 
 -- wait forever for incomming connections
 while 1 do
-	local client = server:accept()
-	local cgminer = assert(SOCKET.tcp())
+	local client, err = server:accept()
+	if client == nil and err ~= 'timeout' then
+		NX.nanosleep(SAMPLE_TIME)
+	end
 
 	if monitor:sample_time() then
+		local cgminer = assert(SOCKET.tcp())
 		cgminer:connect(CGMINER_HOST, CGMINER_PORT)
 		cgminer:send('{ "command":"devs" }')
 		-- read all data and close the connection
-		result = cgminer:receive('*a')
+		local result = cgminer:receive('*a')
 		if result then
 			-- remove null from string
 			result = result:sub(1, -2)
