@@ -7,6 +7,10 @@ zynq_get_firmware_partition() {
 	cur_firmware=$(fw_printenv -n firmware)
 	partition_name=""
 
+	# boot after upgrade is treated as a first one; this prevents interference
+	# with inserted SD card where uEnv.txt can hinder the upgrade process
+	fw_setenv first_boot yes
+
 	# set upgrade stage to 0 to inform U-Boot that upgrade process has been
 	# started; when first boot after upgrade is not successful then U-Boot
 	# reverts firmware to previous one

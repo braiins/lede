@@ -12,8 +12,13 @@ FACTORY_SIZE=0xC00000
 FPGA_OFFSET=0x1400000
 FPGA_SIZE=0x100000
 
-SYSTEM_BIT_PATH=/tmp/system.bit
+SD_DIR=/mnt
+
+SD_FACTORY_BIN_PATH=$SD_DIR/factory.bin
+SD_SYSTEM_BIT_PATH=$SD_DIR/system.bit
+
 FACTORY_BIN_PATH=/tmp/factory.bin
+SYSTEM_BIT_PATH=/tmp/system.bit
 
 REBOOT=no
 
@@ -24,6 +29,7 @@ mtd_write() {
 echo "Miner is in the recovery mode!"
 
 FACTORY_RESET=$(fw_printenv -n factory_reset 2> /dev/null)
+SD_IMAGES=$(fw_printenv -n sd_images 2> /dev/null)
 
 # immediately exit when error occurs
 set -e
@@ -31,14 +37,29 @@ set -e
 if [ x${FACTORY_RESET} == x"yes" ] ; then
 	echo "Resetting to factory settings..."
 
-	# get uncompressed factory image
-	nanddump -s ${FACTORY_OFFSET} -l ${FACTORY_SIZE} ${RECOVERY_MTD} \
-	| gunzip \
-	> "$FACTORY_BIN_PATH"
+	if [ x${SD_IMAGES} == x"yes" ] ; then
+		echo "recovery: using SD images for factory reset"
 
-	# get bitstream for FPGA
-	nanddump -s ${FPGA_OFFSET} -l ${FPGA_SIZE} ${RECOVERY_MTD} \
-	> "$SYSTEM_BIT_PATH"
+		# mount SD
+		mount /dev/mmcblk0p1 ${SD_DIR}
+
+		# copy factory image to temp
+		cp "$SD_FACTORY_BIN_PATH" "$FACTORY_BIN_PATH"
+
+		# compress bitstream for FPGA
+		gzip -c "$SD_SYSTEM_BIT_PATH" > "$SYSTEM_BIT_PATH"
+
+		umount ${SD_DIR}
+	else
+		# get uncompressed factory image
+		nanddump -s ${FACTORY_OFFSET} -l ${FACTORY_SIZE} ${RECOVERY_MTD} \
+		| gunzip \
+		> "$FACTORY_BIN_PATH"
+
+		# get bitstream for FPGA
+		nanddump -s ${FPGA_OFFSET} -l ${FPGA_SIZE} ${RECOVERY_MTD} \
+		> "$SYSTEM_BIT_PATH"
+	fi
 
 	# write the same FPGA bitstream to both MTD partitions
 	mtd_write "$SYSTEM_BIT_PATH" fpga1
@@ -54,7 +75,7 @@ if [ x${FACTORY_RESET} == x"yes" ] ; then
 	fw_setenv factory_reset
 
 	sync
-	echo "Factory reset has been successful!"
+	echo "recovery: factory reset has been successful!"
 
 	REBOOT=yes
 fi
