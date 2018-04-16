@@ -6,18 +6,23 @@ start() {
 	case $(zynq_board_name) in
 		dm1-g9|\
 		dm1-g19)
-			# after successful upgrade delete environment variable to suppress
-			# U-Boot auto-recovery process
-			fw_setenv upgrade_stage
-
-			# after successful factory reset delete environment variable to
-			# allow booting from SD card; it prevents recursive factory when
-			# SD card is still inserted in the slot
-			if [ x$(fw_printenv -n factory_reset) != x"yes" ] ; then
-				fw_setenv first_boot
-				fw_setenv sd_boot
-				fw_setenv sd_images
-			fi
+			# update environment when it is not corrupted
+			test -z "$(fw_printenv 2>&1 >/dev/null)" && update_env
 			;;
 	esac
+}
+
+update_env() {
+	# after successful upgrade delete environment variable to suppress
+	# U-Boot auto-recovery process
+	fw_setenv upgrade_stage
+
+	# after successful factory reset delete environment variable to
+	# allow booting from SD card; it prevents recursive factory when
+	# SD card is still inserted in the slot
+	if [ x$(fw_printenv -n factory_reset) != x"yes" ] ; then
+		fw_setenv first_boot
+		fw_setenv sd_boot
+		fw_setenv sd_images
+	fi
 }
