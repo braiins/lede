@@ -97,6 +97,24 @@ define Device/dm1-g19-sd
 endef
 TARGET_DEVICES += dm1-g19-sd
 
+define Device/dm1-g9-inno
+	DEVICE_TITLE := DragonMint T1/G9 Miner Control Board (Inno)
+	DEVICE_DTS := zynq-dm1-g9
+	IMAGES := fit.itb
+	FILESYSTEMS := squashfs
+	IMAGE_ROOTFS_COMP := none
+endef
+TARGET_DEVICES += dm1-g9-inno
+
+define Device/dm1-g19-inno
+	DEVICE_TITLE := DragonMint T1/G19 Miner Control Board (Inno)
+	DEVICE_DTS := zynq-dm1-g19
+	IMAGES := fit.itb
+	FILESYSTEMS := squashfs
+	IMAGE_ROOTFS_COMP := none
+endef
+TARGET_DEVICES += dm1-g19-inno
+
 define Device/dm1-g9-recovery
 	DEVICE_TITLE := DragonMint T1/G9 Miner Control Board (Recovery)
 	DEVICE_DTS := zynq-dm1-g9
