@@ -1,0 +1,18 @@
+#!/bin/sh
+
+preinit_fan_enable() {
+	echo 0 > /sys/class/pwm/pwmchip0/export
+	echo 0 > /sys/class/pwm/pwmchip1/export
+
+	cd /sys/class/pwm/pwmchip0/pwm0/
+	echo 100000 > period
+	echo 30000  > duty_cycle
+	echo 1 > enable
+
+	cd /sys/class/pwm/pwmchip1/pwm0/
+	echo 100000 > period
+	echo 30000  > duty_cycle
+	echo 1 > enable
+}
+
+boot_hook_add preinit_main preinit_fan_enable
