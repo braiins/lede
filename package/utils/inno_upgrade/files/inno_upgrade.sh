@@ -7,7 +7,7 @@ UPGRADE_SCRIPT="./stage2.sh"
 
 echo "Start braiins/LEDE firmware upgrade process..."
 
-FIRMWARE_OFFSET=$(fw_printenv -n stage2_offset 2> /dev/null)
+FIRMWARE_OFFSET=$(fw_printenv -n stage2_off 2> /dev/null)
 FIRMWARE_SIZE=$(fw_printenv -n stage2_size 2> /dev/null)
 FIRMWARE_MTD=/dev/mtd$(fw_printenv -n stage2_mtd 2> /dev/null)
 
