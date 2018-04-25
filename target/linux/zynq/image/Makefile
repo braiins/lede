@@ -34,6 +34,13 @@ define Build/fit
 	@mv $@.new $@
 endef
 
+define Build/append-tar-file
+	# append file to the end of an archive with specific name
+	$(if $(word 3,$(1)), \
+		gzip -c $(word 1,$(1)) > $@-tmp.gz && tar -rf $@ $@-tmp.gz --transform "s|.*|$(word 2,$(1))|", \
+		tar -rf $@ $(word 1,$(1)) --transform "s|.*|$(word 2,$(1))|")
+endef
+
 #################################################
 # Devices
 #################################################
@@ -55,7 +62,14 @@ define Device/Default
 	IMAGE/uramdisk.image.gz := uRamdisk
 	IMAGE/fit.itb := append-kernel | fit
 	IMAGE/factory.bin := append-ubi
-	IMAGE/sysupgrade.tar := sysupgrade-tar | append-metadata
+	IMAGE/sysupgrade.tar := sysupgrade-tar \
+	$(if $(CONFIG_SYSUPGRADE_WITH_COMMAND), \
+	| append-tar-file ./COMMAND sysupgrade-$$(DEVICE_NAME)/COMMAND) \
+	$(if $(CONFIG_SYSUPGRADE_WITH_UBOOT), \
+	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$$(DEVICE_NAME)/u-boot.img sysupgrade-$$(DEVICE_NAME)/uboot) \
+	$(if $(CONFIG_SYSUPGRADE_WITH_FPGA), \
+	| append-tar-file $$$$(CONFIG_TARGET_FPGA_$$(DEVICE_NAME)) sysupgrade-$$(DEVICE_NAME)/fpga compress) \
+	| append-metadata
 	FILESYSTEMS := cpio
 	IMAGE_ROOTFS_COMP := gzip
 	KERNEL_IN_UBI := 1

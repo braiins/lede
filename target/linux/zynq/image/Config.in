@@ -1,0 +1,24 @@
+config SYSUPGRADE_WITH_COMMAND
+	bool "Include COMMAND script to sysupgrade image"
+	depends on TARGET_DEVICE_zynq_DEVICE_dm1-g9 || TARGET_DEVICE_zynq_DEVICE_dm1-g19
+	default n
+
+config SYSUPGRADE_WITH_UBOOT
+	bool "Include U-Boot to sysupgrade image"
+	depends on TARGET_DEVICE_zynq_DEVICE_dm1-g9 || TARGET_DEVICE_zynq_DEVICE_dm1-g19
+	default n
+
+config SYSUPGRADE_WITH_FPGA
+	bool "Include FPGA bitstream to sysupgrade image"
+	depends on TARGET_DEVICE_zynq_DEVICE_dm1-g9 || TARGET_DEVICE_zynq_DEVICE_dm1-g19
+	default n
+
+config TARGET_FPGA_dm1-g9
+	string "Path to FPGA bitstream for DragonMint T1/G9"
+	depends on TARGET_DEVICE_zynq_DEVICE_dm1-g9
+	default ""
+
+config TARGET_FPGA_dm1-g19
+	string "Path to FPGA bitstream for DragonMint T1/G19"
+	depends on TARGET_DEVICE_zynq_DEVICE_dm1-g19
+	default ""
