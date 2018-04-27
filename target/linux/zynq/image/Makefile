@@ -8,6 +8,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
 
 #################################################
+# Format version
+#################################################
+
+# format version of sysupgrade image
+# it is possible to upgrade firmware only with supported formats
+DM1_FORMAT := '\"format_version\": \"1\"'
+
+#################################################
 # Images
 #################################################
 
@@ -155,6 +163,7 @@ define Device/dm1-g9
 	IMAGES := factory.bin sysupgrade.tar
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP :=
+	IMAGE_METADATA := $(DM1_FORMAT)
 	SUPPORTED_DEVICES := dm1-g9
 endef
 TARGET_DEVICES += dm1-g9
@@ -167,6 +176,7 @@ define Device/dm1-g19
 	IMAGES := factory.bin sysupgrade.tar
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP :=
+	IMAGE_METADATA := $(DM1_FORMAT)
 	SUPPORTED_DEVICES := dm1-g19
 endef
 TARGET_DEVICES += dm1-g19

@@ -47,6 +47,9 @@ zynq_get_firmware_partition() {
 	local dst_firmware=$1
 	local partition_name="firmware$1"
 
+	# remove factory reset to prevent collision with upgrade
+	fw_setenv factory_reset
+
 	# boot after upgrade is treated as a first one; this prevents interference
 	# with inserted SD card where uEnv.txt can hinder the upgrade process
 	fw_setenv first_boot yes
@@ -101,6 +104,39 @@ zynq_command_pre_upgrade() {
 	}
 }
 
+firmware_check_format() {
+	. /usr/share/libubox/jshn.sh
+
+	json_load "$(cat $1)" || {
+		echo "Invalid image metadata"
+		return 1
+	}
+
+	# get image format version
+	json_get_vars format_version || return 1
+
+	json_load "$(cat /etc/fw_info.json)" || {
+		echo "Invalid firmware info"
+		return 1
+	}
+
+	json_select supported_formats || return 1
+
+	json_get_keys format_keys
+	for k in $format_keys; do
+		json_get_var supported_format "$k"
+		[ "$format_version" = "$supported_format" ] && return 0
+	done
+
+	echo "Image format '$format_version' not supported by this firmware"
+	echo -n "Supported formats:"
+	for k in $format_keys; do
+		json_get_var supported_format "$k"
+		echo -n " $supported_format"
+	done
+	echo
+}
+
 platform_check_image() {
 	[ "$#" -gt 1 ] && return 1
 
@@ -108,6 +144,10 @@ platform_check_image() {
 		echo "Invalid image type"
 		return 1
 	}
+
+	if fwtool -q -i /tmp/sysupgrade.meta "$1"; then
+		firmware_check_format "/tmp/sysupgrade.meta" || return 1
+	fi
 
 	zynq_command_check_image "$1" || return 1
 }
