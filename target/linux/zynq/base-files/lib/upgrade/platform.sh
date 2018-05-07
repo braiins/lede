@@ -104,6 +104,25 @@ zynq_command_pre_upgrade() {
 	}
 }
 
+firmware_check_signature() {
+	# signature is stored at the end of the firmware image
+	if ! fwtool -q -s /tmp/sysupgrade.sig "$1"; then
+		echo "Image signature not found"
+		return 1
+	fi
+
+	# the last 4 bytes contains size of signature
+	local image_size=$((0x$(get_image "$1" | tail -c 4 | hexdump -v -n 4 -e '1/1 "%02x"')))
+	local image_digest=$(get_image "$1" | head -c -${image_size} | sha256sum | awk '{print $1}')
+	local pub_key=$(grep -l 'Local build key' /etc/opkg/keys/*)
+
+	# check signature of image digest without signature metadata
+	if ! echo -n "$image_digest" | usign -V -q -m - -x "/tmp/sysupgrade.sig" -p "$pub_key"; then
+		echo "Invalid image signature"
+		return 1
+	fi
+}
+
 firmware_check_format() {
 	. /usr/share/libubox/jshn.sh
 
@@ -144,6 +163,8 @@ platform_check_image() {
 		echo "Invalid image type"
 		return 1
 	}
+
+	firmware_check_signature "$1" || return 1
 
 	if fwtool -q -i /tmp/sysupgrade.meta "$1"; then
 		firmware_check_format "/tmp/sysupgrade.meta" || return 1

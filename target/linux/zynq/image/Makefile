@@ -49,6 +49,12 @@ define Build/append-tar-file
 		tar -rf $@ $(word 1,$(1)) --transform "s|.*|$(word 2,$(1))|")
 endef
 
+define Build/append-signature
+	# sign firmware tarball
+	echo -n $$(sha256sum $@ | awk '{print $$1}') > $@.digest
+	usign -S -m $@.digest -s $(BUILD_KEY) -x - | fwtool -S - $@
+endef
+
 #################################################
 # Devices
 #################################################
@@ -77,7 +83,8 @@ define Device/Default
 	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$$(DEVICE_NAME)/u-boot.img sysupgrade-$$(DEVICE_NAME)/uboot) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_FPGA), \
 	| append-tar-file $$$$(CONFIG_TARGET_FPGA_$$(DEVICE_NAME)) sysupgrade-$$(DEVICE_NAME)/fpga compress) \
-	| append-metadata
+	| append-metadata \
+	| append-signature
 	FILESYSTEMS := cpio
 	IMAGE_ROOTFS_COMP := gzip
 	KERNEL_IN_UBI := 1
