@@ -61,6 +61,10 @@ define Build/Compile
 		install
 endef
 
+define Package/cgminer/conffiles
+/etc/cgminer.conf
+endef
+
 define Package/cgminer/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/cgminer $(1)/usr/bin/cgminer
