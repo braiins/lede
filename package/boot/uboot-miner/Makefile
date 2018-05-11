@@ -68,7 +68,7 @@ define Package/uboot/template
 define Package/uboot-zynq-$(1)
 	SECTION:=boot
 	CATEGORY:=Boot Loaders
-	DEPENDS:=@TARGET_zynq
+	DEPENDS:=@TARGET_zynq_$(subst -,_,$(subst -sd,,$(1)))
 	TITLE:=$(2)
 	URL:=http://www.denx.de/wiki/U-Boot
 	VARIANT:=$(1)

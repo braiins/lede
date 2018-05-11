@@ -13,7 +13,7 @@ include $(INCLUDE_DIR)/image.mk
 
 # format version of sysupgrade image
 # it is possible to upgrade firmware only with supported formats
-DM1_FORMAT := '\"format_version\": \"1\"'
+FORMAT_VERSION := '\"format_version\": \"1\"'
 
 #################################################
 # Images
@@ -34,7 +34,7 @@ endef
 define Build/fit
 	# create FIT image with rootfs
 	./mkits.sh \
-		-D $(DEVICE_NAME) -o $@.its -k $@ -d $(DTS_DIR)/$(DEVICE_DTS).dtb \
+		-D $(SUBTARGET) -o $@.its -k $@ -d $(DTS_DIR)/$(DEVICE_DTS).dtb \
 		-C none -a $(KERNEL_LOADADDR) -e $(KERNEL_ENTRY) \
 		-A $(ARCH) -v $(LINUX_VERSION) \
 		$(if $(IMAGE_ROOTFS_COMP),-r $(IMAGE_ROOTFS) -z $(IMAGE_ROOTFS_COMP))
@@ -68,6 +68,7 @@ KERNEL_ENTRY=0x8000
 TARGET_FILESYSTEMS += cpio
 
 define Device/Default
+	DEVICE_DTS := $(BOARD)-$(SUBTARGET)
 	KERNEL := kernel-bin
 	KERNEL_NAME := zImage
 	PAGESIZE := 2048
@@ -78,11 +79,11 @@ define Device/Default
 	IMAGE/factory.bin := append-ubi
 	IMAGE/sysupgrade.tar := sysupgrade-tar \
 	$(if $(CONFIG_SYSUPGRADE_WITH_COMMAND), \
-	| append-tar-file ./COMMAND sysupgrade-$$(DEVICE_NAME)/COMMAND) \
+	| append-tar-file ./COMMAND sysupgrade-$$(SUBTARGET)/COMMAND) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_UBOOT), \
-	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$$(DEVICE_NAME)/u-boot.img sysupgrade-$$(DEVICE_NAME)/uboot) \
+	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$(SUBTARGET)/u-boot.img sysupgrade-$$(SUBTARGET)/uboot) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_FPGA), \
-	| append-tar-file $$$$(CONFIG_TARGET_FPGA_$$(DEVICE_NAME)) sysupgrade-$$(DEVICE_NAME)/fpga compress) \
+	| append-tar-file $$(CONFIG_TARGET_FPGA) sysupgrade-$$(SUBTARGET)/fpga compress) \
 	| append-metadata \
 	| append-signature
 	FILESYSTEMS := cpio
@@ -90,102 +91,41 @@ define Device/Default
 	KERNEL_IN_UBI := 1
 endef
 
-define Device/zc702
-	DEVICE_TITLE := ZC702 Development Board
-	DEVICE_DTS := zynq-zc702
-endef
-TARGET_DEVICES += zc702
-
-define Device/zed
-	DEVICE_TITLE := ZedBoard Development Board
-	DEVICE_DTS := zynq-zed
-endef
-TARGET_DEVICES += zed
-
-define Device/zybo
-	DEVICE_TITLE := ZYBO Development Board
-	DEVICE_DTS := zynq-zybo
-endef
-TARGET_DEVICES += zybo
-
-define Device/dm1-g9-sd
-	DEVICE_TITLE := DragonMint T1/G9 Miner Control Board (SD)
-	DEVICE_DTS := zynq-dm1-g9
+define Device/sd
+	DEVICE_TITLE := $(BOARDNAME) Miner Control Board (SD)
 	IMAGES := fit.itb
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP := none
 endef
-TARGET_DEVICES += dm1-g9-sd
+TARGET_DEVICES += sd
 
-define Device/dm1-g19-sd
-	DEVICE_TITLE := DragonMint T1/G19 Miner Control Board (SD)
-	DEVICE_DTS := zynq-dm1-g19
+define Device/inno
+	DEVICE_TITLE := $(BOARDNAME) Miner Control Board (Inno)
 	IMAGES := fit.itb
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP := none
 endef
-TARGET_DEVICES += dm1-g19-sd
+TARGET_DEVICES += inno
 
-define Device/dm1-g9-inno
-	DEVICE_TITLE := DragonMint T1/G9 Miner Control Board (Inno)
-	DEVICE_DTS := zynq-dm1-g9
+define Device/recovery
+	DEVICE_TITLE := $(BOARDNAME) Miner Control Board (Recovery)
 	IMAGES := fit.itb
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP := none
 endef
-TARGET_DEVICES += dm1-g9-inno
+TARGET_DEVICES += recovery
 
-define Device/dm1-g19-inno
-	DEVICE_TITLE := DragonMint T1/G19 Miner Control Board (Inno)
-	DEVICE_DTS := zynq-dm1-g19
-	IMAGES := fit.itb
-	FILESYSTEMS := squashfs
-	IMAGE_ROOTFS_COMP := none
-endef
-TARGET_DEVICES += dm1-g19-inno
-
-define Device/dm1-g9-recovery
-	DEVICE_TITLE := DragonMint T1/G9 Miner Control Board (Recovery)
-	DEVICE_DTS := zynq-dm1-g9
-	IMAGES := fit.itb
-	FILESYSTEMS := squashfs
-	IMAGE_ROOTFS_COMP := none
-endef
-TARGET_DEVICES += dm1-g9-recovery
-
-define Device/dm1-g19-recovery
-	DEVICE_TITLE := DragonMint T1/G19 Miner Control Board (Recovery)
-	DEVICE_DTS := zynq-dm1-g19
-	IMAGES := fit.itb
-	FILESYSTEMS := squashfs
-	IMAGE_ROOTFS_COMP := none
-endef
-TARGET_DEVICES += dm1-g19-recovery
-
-define Device/dm1-g9
-	DEVICE_TITLE := DragonMint T1/G9 Miner Control Board
-	DEVICE_DTS := zynq-dm1-g9
+define Device/nand
+	DEVICE_TITLE := $(BOARDNAME) Miner Control Board
 	KERNEL_SUFFIX := -fit.itb
 	KERNEL = kernel-bin | fit
 	IMAGES := factory.bin sysupgrade.tar
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP :=
-	IMAGE_METADATA := $(DM1_FORMAT)
-	SUPPORTED_DEVICES := dm1-g9
+	IMAGE_METADATA := $(FORMAT_VERSION)
+	BOARD_NAME := $(SUBTARGET)
+	SUPPORTED_DEVICES := $(SUBTARGET)
 endef
-TARGET_DEVICES += dm1-g9
-
-define Device/dm1-g19
-	DEVICE_TITLE := DragonMint T1/G19 Miner Control Board
-	DEVICE_DTS := zynq-dm1-g19
-	KERNEL_SUFFIX := -fit.itb
-	KERNEL = kernel-bin | fit
-	IMAGES := factory.bin sysupgrade.tar
-	FILESYSTEMS := squashfs
-	IMAGE_ROOTFS_COMP :=
-	IMAGE_METADATA := $(DM1_FORMAT)
-	SUPPORTED_DEVICES := dm1-g19
-endef
-TARGET_DEVICES += dm1-g19
+TARGET_DEVICES += nand
 
 $(eval $(call BuildImage))
