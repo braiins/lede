@@ -1,14 +1,22 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
+PKG_NAME:=firmware
+PKG_MAINTAINER:=Libor Vasicek <libor.vasicek@braiins.cz>
+
 CURRENT_DATE:=$(shell date --rfc-3339=date)
 GIT_HASH:=$(shell git rev-parse --short HEAD)
 GIT_DIRTY:=$(if $(shell git status --porcelain),-dirty)
 
-PKG_NAME:=firmware
-PKG_RELEASE:=$(CURRENT_DATE)-$(GIT_HASH)$(GIT_DIRTY)
+# each release has TAG in git
+# check if firmware has been released for current date and increase patch level accordingly
+PATCH_LEVEL_PREV:=$(shell \
+	git tag --sort=refname -l '$(PKG_NAME)_$(CURRENT_DATE)*' | tail -n -1 | \
+	sed 's,$(PKG_NAME)_$(CURRENT_DATE)-\([^-]*\).*,\1,')
+PATCH_LEVEL:=$(if $(PATCH_LEVEL_PREV),$(shell echo $$(($(PATCH_LEVEL_PREV) + 1))),0)
 
-PKG_MAINTAINER:=Libor Vasicek <libor.vasicek@braiins.cz>
+# set firmware version
+PKG_RELEASE:=$(CURRENT_DATE)-$(PATCH_LEVEL)-$(GIT_HASH)$(GIT_DIRTY)
 
 MINER_FEEDS_SERVER:=https://miner.slushpool.com/$(SUBTARGET)
 MINER_FEEDS_CONFIG:=/etc/opkg/minerfeeds.conf
