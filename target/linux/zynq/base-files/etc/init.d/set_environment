@@ -1,0 +1,35 @@
+#!/bin/sh /etc/rc.common
+
+MINER_HWID_SRC="/etc/miner_hwid"
+MINER_HWID_DST="/tmp/miner_hwid"
+
+START=45
+start() {
+	. /lib/zynq.sh
+	case $(zynq_board_name) in
+		dm1-g9|\
+		dm1-g19)
+			local miner_hwid=$(fw_printenv -n miner_hwid 2>/dev/null)
+
+			if [ -n "$miner_hwid" ]; then
+				# hwid has been obtained from NAND
+				echo "$miner_hwid" > "$MINER_HWID_DST"
+			else
+				# fallback when NAND is corrupted or it is used SD image
+				# with incompatible miner firmware
+				# use previously generated hwid or generate the new one
+				[ -f "$MINER_HWID_SRC" ] || \
+					echo $(generate_hwid) > "$MINER_HWID_SRC"
+				cp "$MINER_HWID_SRC" "$MINER_HWID_DST"
+			fi
+			;;
+	esac
+}
+
+generate_hwid() {
+	local ethaddr=$(cat /sys/class/net/eth0/address)
+
+	# improve random seed with MAC address which should be unique
+	echo ${ethaddr} > /dev/urandom
+	dd if=/dev/urandom bs=1 count=12 2>/dev/null | base64 | tr "+/" "ab"
+}
