@@ -16,6 +16,14 @@ local CHAINS = 6
 local SAMPLE_TIME = 1
 local MHS = {60, 300, 900}
 
+
+local LED_PATH = '/sys/devices/soc0/amba_pl/amba_pl:leds/leds/Red LED'
+
+-- utility functions
+function log(fmt, ...)
+	io.write((fmt..'\n'):format(...))
+end
+
 -- class declarations
 local History = {}
 History.__index = History
@@ -29,9 +37,54 @@ CGMinerDevs.__index = CGMinerDevs
 local Monitor = {}
 Monitor.__index = Monitor
 
+local Led = {}
+Led.__index = Led
+
 function get_uptime()
 	return NX.sysinfo()['uptime']
 end
+
+-- Led class
+function Led.new(path)
+	local self = setmetatable({}, Led)
+	self.path = path
+	return self
+end
+
+function Led:sysfs_write(attr, val)
+	local path = self.path..'/'..attr
+	local f = io.open(path, 'w')
+	if not f then
+		log('failed to open %s', path)
+		return
+	end
+	f:write(val)
+	f:close()
+end
+
+function Led:set_mode(mode)
+	log('led mode %s', mode)
+	if mode == 'on' or mode == 'off' then
+		self:sysfs_write('trigger', 'none')
+		if mode == 'off' then
+			self:sysfs_write('brightness', '0')
+		else
+			self:sysfs_write('brightness', '255')
+		end
+	elseif mode == 'blink-fast' or mode == 'blink-slow' then
+		local time_on, time_off = 50, 950
+		if mode == 'blink-fast' then
+			time_off = 50
+		end
+		self:sysfs_write('trigger', 'timer')
+		self:sysfs_write('delay_on', tostring(time_on))
+		self:sysfs_write('delay_off', tostring(time_off))
+	else
+		log('bad led mode %s', mode)
+		return
+	end
+end
+
 
 -- History class
 function History.new(max_size)
@@ -109,11 +162,13 @@ function CGMinerDevs:get(id)
 end
 
 -- Monitor class
-function Monitor.new(history_size)
+function Monitor.new(history_size, led_path)
 	local self = setmetatable({}, Monitor)
 	self.history = History.new(history_size)
 	self.last_time = 0
 	self.chains = {}
+	self.state = ''
+	self.led = Led.new(led_path)
 	for _ = 1,CHAINS do
 		local chain = {}
 		chain.temp = 0
@@ -122,12 +177,15 @@ function Monitor.new(history_size)
 		chain.accepted = 0
 		chain.rejected = 0
 		chain.mhs_cur = 0
+		chain.mhs_max = 0
+		chain.mhs_nom = 0
 		chain.mhs = {}
 		for _, interval in ipairs(MHS) do
 			chain.mhs[interval] = RollingAverage.new(interval)
 		end
 		table.insert(self.chains, chain)
 	end
+	self:set_state('dead')
 	return self
 end
 
@@ -205,12 +263,16 @@ function Monitor:add_sample(response)
 			chain.accepted = dev["Accepted"]
 			chain.rejected = dev["Rejected"]
 			chain.mhs_cur = dev["MHS 5s"]
+			chain.mhs_nom = dev["nominal MHS"] or 0
+			chain.mhs_max = dev["maximal MHS"] or 0
 		else
 			chain.temp = 0
 			chain.errs_last = 0
 			chain.accepted = 0
 			chain.rejected = 0
 			chain.mhs_cur = 0
+			chain.mhs_nom = 0
+			chain.mhs_max = 0
 		end
 		for _, mhs in pairs(chain.mhs) do
 			mhs:add(chain.mhs_cur, current_time)
@@ -220,6 +282,20 @@ function Monitor:add_sample(response)
 	end
 	self.history:append(sample)
 	self.last_time = current_time
+end
+
+-- check if all chains are at least at 80% of nominal rate
+function Monitor:check_healthy()
+	local healthy = true
+	for i, chain in ipairs(self.chains) do
+		if chain.mhs_nom > 0 then
+			--log("chain %d health %f", i, chain.mhs_cur/chain.mhs_nom*100)
+			if chain.mhs_cur < chain.mhs_nom*0.8 then
+				healthy = false
+			end
+		end
+	end
+	return healthy
 end
 
 function Monitor:get_response()
@@ -232,14 +308,29 @@ function Monitor:get_response()
 	end
 end
 
-local monitor = Monitor.new(HISTORY_SIZE)
+local state_to_led = {
+	dead = 'on',
+	ok = 'off',
+	sick = 'blink-slow',
+}
+
+function Monitor:set_state(state)
+	if state ~= self.state then
+		log('state %s', state)
+		self.led:set_mode(assert(state_to_led[state]))
+		self.state = state
+	end
+end
+
+
+local monitor = Monitor.new(HISTORY_SIZE, LED_PATH)
 local server = assert(SOCKET.bind(SERVER_HOST, SERVER_PORT))
 
 -- server accept is interrupted every second to get new sample from cgminer
 server:settimeout(SAMPLE_TIME)
 
 -- wait forever for incomming connections
-while 1 do
+while true do
 	local client, err = server:accept()
 	if client == nil and err ~= 'timeout' then
 		NX.nanosleep(SAMPLE_TIME)
@@ -247,15 +338,25 @@ while 1 do
 
 	if monitor:sample_time() then
 		local cgminer = assert(SOCKET.tcp())
-		cgminer:connect(CGMINER_HOST, CGMINER_PORT)
-		cgminer:send('{ "command":"devs" }')
-		-- read all data and close the connection
-		local result = cgminer:receive('*a')
-		if result then
-			-- remove null from string
-			result = result:sub(1, -2)
+		local ret, err = cgminer:connect(CGMINER_HOST, CGMINER_PORT)
+		if ret then
+			cgminer:send('{ "command":"devs" }')
+			-- read all data and close the connection
+			local result = cgminer:receive('*a')
+			if result then
+				-- remove null from string
+				result = result:sub(1, -2)
+			end
+			monitor:add_sample(result)
+			-- check if miner is running ok
+			if monitor:check_healthy() then
+				monitor:set_state('ok')
+			else
+				monitor:set_state('sick')
+			end
+		else
+			monitor:set_state('dead')
 		end
-		monitor:add_sample(result)
 	end
 	if client then
 		local response = monitor:get_response(history)
