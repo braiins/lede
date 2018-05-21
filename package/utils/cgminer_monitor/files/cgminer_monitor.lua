@@ -168,6 +168,8 @@ function Monitor.new(history_size, led_path)
 	self.last_time = 0
 	self.chains = {}
 	self.state = ''
+	self.led_mode = 'on'
+	self.led_override = false
 	self.led = Led.new(led_path)
 	for _ = 1,CHAINS do
 		local chain = {}
@@ -308,6 +310,14 @@ function Monitor:get_response()
 	end
 end
 
+function Monitor:update_led()
+	if self.led_override then
+		self.led:set_mode('blink-fast')
+	else
+		self.led:set_mode(self.led_mode)
+	end
+end
+
 local state_to_led = {
 	dead = 'on',
 	ok = 'off',
@@ -317,8 +327,9 @@ local state_to_led = {
 function Monitor:set_state(state)
 	if state ~= self.state then
 		log('state %s', state)
-		self.led:set_mode(assert(state_to_led[state]))
+		self.led_mode = assert(state_to_led[state])
 		self.state = state
+		self:update_led()
 	end
 end
 
@@ -362,6 +373,17 @@ while true do
 		local response = monitor:get_response(history)
 		if response then
 			client:send(response)
+		end
+		client:settimeout(1)
+		local ok, err = client:receive('*a')
+		if ok then
+			local w = ok:match('^(%w+)')
+			if w == 'on' then
+				monitor.led_override = true
+			elseif w == 'off' then
+				monitor.led_override = false
+			end
+			monitor:update_led()
 		end
 		client:close()
 	end
