@@ -20,7 +20,7 @@ update_env() {
 	# after successful factory reset delete environment variable to
 	# allow booting from SD card; it prevents recursive factory when
 	# SD card is still inserted in the slot
-	if [ x$(fw_printenv -n factory_reset) != x"yes" ] ; then
+	if [ x$(fw_printenv -n factory_reset 2>/dev/null) != x"yes" ] ; then
 		fw_setenv first_boot
 		fw_setenv sd_boot
 		fw_setenv sd_images
