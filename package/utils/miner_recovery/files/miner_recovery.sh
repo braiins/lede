@@ -20,24 +20,28 @@ SD_SYSTEM_BIT_PATH=$SD_DIR/system.bit
 FACTORY_BIN_PATH=/tmp/factory.bin
 SYSTEM_BIT_PATH=/tmp/system.bit
 
-REBOOT=no
-
 mtd_write() {
 	mtd -e "$2" write "$1" "$2"
 }
 
 echo "Miner is in the recovery mode!"
 
-FACTORY_RESET=$(fw_printenv -n factory_reset 2> /dev/null)
-SD_IMAGES=$(fw_printenv -n sd_images 2> /dev/null)
+# prevent NAND corruption when U-Boot env cannot be read
+if [ -n "$(fw_printenv 2>&1 >/dev/null)" ]; then
+	echo "Do not use 'fw_setenv' to prevent NAND corruption!"
+	exit 1
+fi
+
+FACTORY_RESET=$(fw_printenv -n factory_reset 2>/dev/null)
+SD_IMAGES=$(fw_printenv -n sd_images 2>/dev/null)
 
 # immediately exit when error occurs
 set -e
 
-if [ x${FACTORY_RESET} == x"yes" ] ; then
+if [ x${FACTORY_RESET} == x"yes" ]; then
 	echo "Resetting to factory settings..."
 
-	if [ x${SD_IMAGES} == x"yes" ] ; then
+	if [ x${SD_IMAGES} == x"yes" ]; then
 		echo "recovery: using SD images for factory reset"
 
 		# mount SD
@@ -77,13 +81,6 @@ if [ x${FACTORY_RESET} == x"yes" ] ; then
 	sync
 	echo "recovery: factory reset has been successful!"
 
-	REBOOT=yes
-fi
-
-# remove recovery mode from U-Boot env to boot in normal mode next time
-fw_setenv recovery
-
-if [ x${REBOOT} == x"yes" ] ; then
 	# reboot system
 	echo "Restarting system..."
 	reboot
