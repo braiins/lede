@@ -99,13 +99,13 @@ define Device/sd
 endef
 TARGET_DEVICES += sd
 
-define Device/inno
-	DEVICE_TITLE := $(BOARDNAME) Miner Control Board (Inno)
+define Device/upgrade
+	DEVICE_TITLE := $(BOARDNAME) Miner Control Board (Upgrade)
 	IMAGES := fit.itb
 	FILESYSTEMS := squashfs
 	IMAGE_ROOTFS_COMP := none
 endef
-TARGET_DEVICES += inno
+TARGET_DEVICES += upgrade
 
 define Device/recovery
 	DEVICE_TITLE := $(BOARDNAME) Miner Control Board (Recovery)
