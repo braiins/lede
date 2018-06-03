@@ -38,6 +38,10 @@ SD_IMAGES=$(fw_printenv -n sd_images 2>/dev/null)
 # immediately exit when error occurs
 set -e
 
+# set LEDs to signal recovery mode
+echo timer > "/sys/class/leds/Green LED/trigger"
+echo nand-disk > "/sys/class/leds/Red LED/trigger"
+
 if [ x${FACTORY_RESET} == x"yes" ]; then
 	echo "Resetting to factory settings..."
 
