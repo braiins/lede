@@ -6,13 +6,22 @@ USE_PROCD=1
 PROG=/usr/bin/cgminer
 CONF=/etc/cgminer.conf
 
-CONF_TEMPLATE=$(cat << END
+boot()
+{
+	if [ ! -f "$CONF" ]; then
+		# get default pool configuration from U-Boot env
+		local pool_host=$(fw_printenv -n miner_pool_host 2>/dev/null)
+		local pool_port=$(fw_printenv -n miner_pool_port 2>/dev/null)
+		local pool_user=$(fw_printenv -n miner_pool_user 2>/dev/null)
+		local pool_pass=$(fw_printenv -n miner_pool_pass 2>/dev/null)
+
+		cat > "$CONF" <<END
 {
 	"pools" : [
 		{
-			"url" : "\${POOL_HOST}:\${POOL_PORT}",
-			"user" : "\${POOL_USER}",
-			"pass" : "\${POOL_PASS}"
+			"url" : "${pool_host:-stratum+tcp://stratum.slushpool.com}:${pool_port:-3333}",
+			"user" : "${pool_user:-braiinstest.worker1}",
+			"pass" : "${pool_pass}"
 		}
 	],
 	"api-allow" : "W:127.0.0.1",
@@ -28,29 +37,6 @@ CONF_TEMPLATE=$(cat << END
 	"enabled-chains" : "0,1,2"
 }
 END
-)
-
-boot()
-{
-	if [ ! -f "$CONF" ]; then
-		# get default pool configuration from U-Boot env
-		local pool_host=$(fw_printenv -n miner_pool_host 2>/dev/null)
-		local pool_port=$(fw_printenv -n miner_pool_port 2>/dev/null)
-		local pool_user=$(fw_printenv -n miner_pool_user 2>/dev/null)
-		local pool_pass=$(fw_printenv -n miner_pool_pass 2>/dev/null)
-
-		# set default values when NAND is not present
-		pool_host=${pool_host:-stratum+tcp://stratum.slushpool.com}
-		pool_port=${pool_port:-3333}
-		pool_user=${pool_user:-braiinstest.worker1}
-
-		mkdir -p /etc
-		echo "$CONF_TEMPLATE" | \
-		sed -e "s,\${POOL_HOST},$pool_host,g" \
-			-e "s,\${POOL_PORT},$pool_port,g" \
-			-e "s,\${POOL_USER},$pool_user,g" \
-			-e "s,\${POOL_PASS},$pool_pass,g" \
-		> "$CONF"
 	fi
 	start "$@"
 }
