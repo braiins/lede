@@ -52,6 +52,7 @@ boot()
 			-e "s,\${POOL_PASS},$pool_pass,g" \
 		> "$CONF"
 	fi
+	start "$@"
 }
 
 start_service()
