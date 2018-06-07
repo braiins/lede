@@ -26,6 +26,10 @@ mtd_write() {
 
 echo "Miner is in the recovery mode!"
 
+# try to set LEDs to signal recovery mode
+echo timer > "/sys/class/leds/Green LED/trigger"
+echo nand-disk > "/sys/class/leds/Red LED/trigger"
+
 # prevent NAND corruption when U-Boot env cannot be read
 if [ -n "$(fw_printenv 2>&1 >/dev/null)" ]; then
 	echo "Do not use 'fw_setenv' to prevent NAND corruption!"
@@ -37,10 +41,6 @@ SD_IMAGES=$(fw_printenv -n sd_images 2>/dev/null)
 
 # immediately exit when error occurs
 set -e
-
-# set LEDs to signal recovery mode
-echo timer > "/sys/class/leds/Green LED/trigger"
-echo nand-disk > "/sys/class/leds/Red LED/trigger"
 
 if [ x${FACTORY_RESET} == x"yes" ]; then
 	echo "Resetting to factory settings..."
