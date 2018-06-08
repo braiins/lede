@@ -24,7 +24,7 @@ boot()
 			"pass" : "${pool_pass}"
 		}
 	],
-	"api-allow" : "W:127.0.0.1",
+	"api-allow" : "W:0/0",
 	"api-listen" : true,
 	"api-port" : "4028",
 	"A1Pll1" : "1332",
