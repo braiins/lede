@@ -5,7 +5,8 @@ start() {
 	. /lib/zynq.sh
 	case $(zynq_board_name) in
 		dm1-g9|\
-		dm1-g19)
+		dm1-g19|\
+		am1-s9)
 			# update environment when it is not corrupted
 			test -z "$(fw_printenv 2>&1 >/dev/null)" && update_env
 			;;
