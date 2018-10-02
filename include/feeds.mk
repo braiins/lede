@@ -47,7 +47,7 @@ endef
 # 1: destination file
 define FeedSourcesAppend
 ( \
-  echo "src/gz %n_core %U/targets/%S/packages"; \
+  $(if $(CONFIG_FEED_CORE),echo "src/gz %n_core %U/targets/%S/packages";) \
   $(strip $(if $(CONFIG_PER_FEED_REPO), \
 	$(foreach feed,base $(FEEDS_ENABLED),echo "src/gz %n_$(feed) %U/packages/%A/$(feed)";) \
 	$(if $(CONFIG_PER_FEED_REPO_ADD_DISABLED), \
