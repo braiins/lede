@@ -64,6 +64,9 @@ VERSION_PRODUCT:=$(if $(VERSION_PRODUCT),$(VERSION_PRODUCT),Generic)
 VERSION_HWREV:=$(call qstrip_escape,$(CONFIG_VERSION_HWREV))
 VERSION_HWREV:=$(if $(VERSION_HWREV),$(VERSION_HWREV),v0)
 
+VERSION_FW:=$(call qstrip_escape,$(CONFIG_FIRMWARE_VERSION))
+VERSION_FW:=$(if $(VERSION_FW),$(VERSION_FW),Unknown)
+
 define taint2sym
 $(CONFIG_$(firstword $(subst :, ,$(subst +,,$(subst -,,$(1))))))
 endef
@@ -107,6 +110,7 @@ VERSION_SED:=$(SED) 's,%U,$(VERSION_REPO),g' \
 	-e 's,%b,$(VERSION_BUG_URL),g' \
 	-e 's,%s,$(VERSION_SUPPORT_URL),g' \
 	-e 's,%P,$(VERSION_PRODUCT),g' \
-	-e 's,%h,$(VERSION_HWREV),g'
+	-e 's,%h,$(VERSION_HWREV),g' \
+	-e 's,%f,$(VERSION_FW),g'
 
 VERSION_SED_SCRIPT:=$(subst '\'','\'\\\\\'\'',$(VERSION_SED))
