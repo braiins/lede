@@ -80,6 +80,8 @@ define Device/Default
 	IMAGE/sysupgrade.tar := sysupgrade-tar \
 	$(if $(CONFIG_SYSUPGRADE_WITH_COMMAND), \
 	| append-tar-file ./COMMAND sysupgrade-$$(SUBTARGET)/COMMAND) \
+	$(if $(CONFIG_SYSUPGRADE_WITH_SPL), \
+	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$(SUBTARGET)/boot.bin sysupgrade-$$(SUBTARGET)/spl) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_UBOOT), \
 	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$(SUBTARGET)/u-boot.img sysupgrade-$$(SUBTARGET)/uboot) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_FPGA), \
