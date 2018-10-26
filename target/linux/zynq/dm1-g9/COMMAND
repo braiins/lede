@@ -1,0 +1,7 @@
+check_image() {
+	return 0
+}
+
+pre_upgrade() {
+	return
+}

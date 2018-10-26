@@ -79,7 +79,7 @@ define Device/Default
 	IMAGE/factory.bin := append-ubi
 	IMAGE/sysupgrade.tar := sysupgrade-tar \
 	$(if $(CONFIG_SYSUPGRADE_WITH_COMMAND), \
-	| append-tar-file ./COMMAND sysupgrade-$$(SUBTARGET)/COMMAND) \
+	| append-tar-file ../$(SUBTARGET)/COMMAND sysupgrade-$$(SUBTARGET)/COMMAND) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_SPL), \
 	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$(SUBTARGET)/boot.bin sysupgrade-$$(SUBTARGET)/spl) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_UBOOT), \
