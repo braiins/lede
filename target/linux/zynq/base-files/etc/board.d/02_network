@@ -3,12 +3,53 @@
 
 . /lib/functions/uci-defaults.sh
 
+BOS_MODE=$(cat /etc/bos_mode)
+
+get_config() {
+	# return empty string when bOS mode is not 'nand' to use default settings
+	if [ $BOS_MODE = 'nand' ]; then
+		/usr/sbin/fw_printenv -n "$1" 2> /dev/null
+	fi
+}
+
+hostname=$(get_config "net_hostname")
+ipaddr=$(get_config "net_ip")
+
+if [ -z "$hostname" ]; then
+	# use default hostname when it is missing
+	macaddr="$(cat /sys/class/net/eth0/address)"
+	minerid="$(echo $macaddr | sed 's/.*:\(.*\):\(.*\):\(.*\)/\1\2\3/')"
+	hostname="miner-$minerid"
+fi
+
+# use static protocol when IP is specified
+[ -n "$ipaddr" ] && protocol='static' || protocol='dhcp'
+
 board_config_update
 
-macaddr="$(cat /sys/class/net/eth0/address)"
-minerid="$(echo $macaddr | sed 's/.*:\(.*\):\(.*\):\(.*\)/\1\2\3/')"
+ucidef_set_interface_lan 'eth0' "$protocol" "$hostname"
 
-ucidef_set_interface_lan 'eth0' 'dhcp' "miner-$minerid"
+if [ $protocol = 'static' ]; then
+    # static protocol requires other parameters
+	netmask=$(get_config "net_mask")
+	gateway=$(get_config "net_gateway")
+	dns_servers=$(get_config "net_dns_servers" | tr , " ")
+	json_select network
+		json_select lan
+			json_add_string ipaddr "$ipaddr"
+			[ -n "$netmask" ] && json_add_string netmask "$netmask"
+			[ -n "$gateway" ] && json_add_string gateway "$gateway"
+
+			if [ -n "$dns_servers" ]; then
+				json_select_array dns_servers
+				for dns in $dns_servers; do
+					json_add_string "" "$dns"
+				done
+				json_select ..
+			fi
+		json_select ..
+	json_select ..
+fi
 
 board_config_flush
 

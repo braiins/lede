@@ -57,11 +57,22 @@ generate_static_network() {
 
 addr_offset=2
 generate_network() {
-	local ifname macaddr protocol type ipaddr netmask hostname
+	local ifname macaddr protocol type ipaddr netmask gateway dns_servers hostname
 
 	json_select network
 		json_select "$1"
-			json_get_vars ifname macaddr protocol ipaddr netmask hostname
+			json_get_vars ifname macaddr protocol ipaddr netmask gateway hostname
+			if json_is_a dns_servers array; then
+				local keys key
+				json_get_keys keys dns_servers
+				json_select dns_servers
+					for key in $keys; do
+						local dns
+						json_get_var dns "$key"
+						dns_servers="${dns_servers}${dns_servers:+ }$dns"
+					done
+				json_select ..
+			fi
 		json_select ..
 	json_select ..
 
@@ -101,6 +112,7 @@ generate_network() {
 				set network.$1.proto='static'
 				set network.$1.ipaddr='$ipad'
 				set network.$1.netmask='$netm'
+				set network.$1.gateway='$gateway'
 				set network.$1.ip6assign='60'
 			EOF
 		;;
@@ -132,6 +144,7 @@ generate_network() {
 		;;
 	esac
 
+	[ -n "$dns_servers" ] && uci -q set network.$1.dns="$dns_servers"
 	[ -n "$hostname" ] && uci -q set network.$1.hostname="$hostname"
 }
 
