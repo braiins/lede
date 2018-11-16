@@ -7,9 +7,14 @@ BOS_MODE=$(cat /etc/bos_mode)
 
 get_config() {
 	# return empty string when bOS mode is not 'nand' to use default settings
-	if [ $BOS_MODE = 'nand' ]; then
+	case $BOS_MODE in
+	'nand')
 		/usr/sbin/fw_printenv -n "$1" 2> /dev/null
-	fi
+		;;
+	'recovery')
+		/usr/sbin/fw_printenv -n "recovery_$1" 2> /dev/null
+		;;
+	esac
 }
 
 hostname=$(get_config "net_hostname")
