@@ -2,6 +2,18 @@
 
 . /lib/functions/uci-defaults.sh
 
+BOS_MODE=$(cat /etc/bos_mode)
+
+if [ $BOS_MODE == 'recovery' ]; then
+	DEFAULT_UENV_MTD=mtd4
+	# try to find MTD partition for recovery U-Boot environment
+	uboot_env_mtd=$(cat /proc/mtd | grep -w recovery_uboot_env | sed 's/^\([^:]*\).*/\1/')
+	uboot_env_mtd=${uboot_env_mtd:-$DEFAULT_UENV_MTD}
+
+	# update U-Boot environment configuration with recovery partition
+	sed "s/$DEFAULT_UENV_MTD/$uboot_env_mtd/" /etc/fw_env.config >/tmp/fw_env.config
+fi
+
 board_config_update
 
 ucidef_set_hostname "MINER"
