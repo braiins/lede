@@ -26,5 +26,6 @@ try_mtime() {
 	[ -n "$SOURCE_DATE_EPOCH" ]
 }
 
-try_version || try_git || try_hg || try_mtime || SOURCE_DATE_EPOCH=""
-echo "$SOURCE_DATE_EPOCH"
+#try_version || try_git || try_hg || try_mtime || SOURCE_DATE_EPOCH=""
+#echo "$SOURCE_DATE_EPOCH"
+date "+%s"
