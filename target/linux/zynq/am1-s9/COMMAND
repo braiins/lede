@@ -1,25 +1,5 @@
-BOARD_NAME="am1-s9"
-
-get_fw_version() {
-	if ! cat /etc/bos_version 2>/dev/null; then
-		sed -n '/^Package: firmware$/,/Version/s/.*Version: //p' /usr/lib/opkg/status
-	fi
-}
-
 check_image() {
-	local board_name=$1
-	local fw_version=$(get_fw_version)
-	local fw_version_compat="2018-10-24-0-9e5687a2"
-
-	echo "Checking firmware compatibility..."
-
-	if [ x"$board_name" != x"$BOARD_NAME" -o x"$fw_version" != x"$fw_version_compat" ]; then
-		echo "Firmware upgrade is compatible only with version '$fw_version_compat'"
-		echo "Installed version is: $fw_version ($board_name)"
-		return 1
-	fi
-
-	return 0
+	check_fw_version $1 "2018-10-24-0-9e5687a2"
 }
 
 pre_upgrade() {

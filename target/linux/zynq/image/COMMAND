@@ -1,0 +1,25 @@
+UPGRADE_FW_VERSION="%f"
+
+current_fw_version() {
+	if ! cat /etc/bos_version 2>/dev/null; then
+		awk '/Package: /{p=$2} /Version: /{v=$2} /Status: /{if (p == "firmware" && $NF == "installed") print v}' \
+			'/usr/lib/opkg/status'
+	fi
+}
+
+check_fw_version() {
+	local board_name=$1
+	local fw_version=$(current_fw_version)
+	local fw_version_compat="$2"
+
+	echo "Checking firmware compatibility..."
+
+	if [ x"$fw_version" != x"$fw_version_compat" ]; then
+		echo "Firmware upgrade is compatible only with version '$fw_version_compat'"
+		echo "Installed version is: $fw_version ($board_name)"
+		return 1
+	fi
+
+	return 0
+}
+

@@ -44,9 +44,12 @@ endef
 
 define Build/append-tar-file
 	# append file to the end of an archive with specific name
-	$(if $(word 3,$(1)), \
-		gzip -c $(word 1,$(1)) > $@-tmp.gz && tar -rf $@ $@-tmp.gz --transform "s|.*|$(word 2,$(1))|", \
-		tar -rf $@ $(word 1,$(1)) --transform "s|.*|$(word 2,$(1))|")
+	$(if $(word 4,$(1)),cp $(word 4,$(1)) $@-tmp)
+	$(if $(word 3,$(1)),$(if $(subst compress,,$(word 3,$(1))), \
+		$(VERSION_SED) $@-tmp && cat $(word 1,$(1)) >> $@-tmp && tar -rf $@ $@-tmp, \
+		gzip -c $(word 1,$(1)) > $@-tmp.gz && tar -rf $@ $@-tmp.gz), \
+		tar -rf $@ $(word 1,$(1))) \
+	--transform "s|.*|$(word 2,$(1))|"
 endef
 
 define Build/append-signature
@@ -79,7 +82,7 @@ define Device/Default
 	IMAGE/factory.bin := append-ubi
 	IMAGE/sysupgrade.tar := sysupgrade-tar \
 	$(if $(CONFIG_SYSUPGRADE_WITH_COMMAND), \
-	| append-tar-file ../$(SUBTARGET)/COMMAND sysupgrade-$$(SUBTARGET)/COMMAND) \
+	| append-tar-file ../$(SUBTARGET)/COMMAND sysupgrade-$$(SUBTARGET)/COMMAND version_sed COMMAND) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_SPL), \
 	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$(SUBTARGET)/boot.bin sysupgrade-$$(SUBTARGET)/spl) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_UBOOT), \
