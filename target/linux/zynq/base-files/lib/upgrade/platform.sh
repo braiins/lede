@@ -114,10 +114,9 @@ firmware_check_signature() {
 	# the last 4 bytes contains size of signature
 	local image_size=$((0x$(get_image "$1" | tail -c 4 | hexdump -v -n 4 -e '1/1 "%02x"')))
 	local image_digest=$(get_image "$1" | head -c -${image_size} | sha256sum | awk '{print $1}')
-	local pub_key=$(grep -l 'Local build key' /etc/opkg/keys/*)
 
 	# check signature of image digest without signature metadata
-	if ! echo -n "$image_digest" | usign -V -q -m - -x "/tmp/sysupgrade.sig" -p "$pub_key"; then
+	if ! echo -n "$image_digest" | usign -V -q -m - -x "/tmp/sysupgrade.sig" -P "/etc/opkg/keys"; then
 		echo "Invalid image signature"
 		return 1
 	fi

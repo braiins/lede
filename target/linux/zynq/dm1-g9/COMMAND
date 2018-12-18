@@ -1,5 +1,5 @@
 check_image() {
-	check_fw_version $1 "2018-09-22-1-4ea78c06"
+	check_fw_version $1
 }
 
 pre_upgrade() {

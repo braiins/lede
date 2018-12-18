@@ -24,6 +24,9 @@ PKG_CONFIG_DEPENDS += \
 	CONFIG_VERSION_PRODUCT \
 	CONFIG_VERSION_SUPPORT_URL \
 	CONFIG_VERSION_HWREV \
+	CONFIG_FIRMWARE_VERSION \
+	CONFIG_FIRMWARE_MAJOR \
+	CONFIG_FIRMWARE_REQUIRE
 
 qstrip_escape=$(subst ','\'',$(call qstrip,$(1)))
 #'
@@ -66,6 +69,11 @@ VERSION_HWREV:=$(if $(VERSION_HWREV),$(VERSION_HWREV),v0)
 
 VERSION_FW:=$(call qstrip_escape,$(CONFIG_FIRMWARE_VERSION))
 VERSION_FW:=$(if $(VERSION_FW),$(VERSION_FW),Unknown)
+
+VERSION_FW_MAJOR:=$(call qstrip_escape,$(CONFIG_FIRMWARE_MAJOR))
+VERSION_FW_MAJOR:=$(if $(VERSION_FW_MAJOR),$(VERSION_FW_MAJOR),Unknown)
+
+VERSION_FW_REQUIRE:=$(call qstrip_escape,$(CONFIG_FIRMWARE_REQUIRE))
 
 define taint2sym
 $(CONFIG_$(firstword $(subst :, ,$(subst +,,$(subst -,,$(1))))))
@@ -111,6 +119,8 @@ VERSION_SED:=$(SED) 's,%U,$(VERSION_REPO),g' \
 	-e 's,%s,$(VERSION_SUPPORT_URL),g' \
 	-e 's,%P,$(VERSION_PRODUCT),g' \
 	-e 's,%h,$(VERSION_HWREV),g' \
-	-e 's,%f,$(VERSION_FW),g'
+	-e 's,%f,$(VERSION_FW),g' \
+	-e 's,%F,$(VERSION_FW_MAJOR),g' \
+	-e 's,%r,$(VERSION_FW_REQUIRE),g'
 
 VERSION_SED_SCRIPT:=$(subst '\'','\'\\\\\'\'',$(VERSION_SED))

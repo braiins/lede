@@ -1,4 +1,6 @@
+UPGRADE_FW_MAJOR="%F"
 UPGRADE_FW_VERSION="%f"
+UPGRADE_FW_REQUIRE="%r"
 
 current_fw_version() {
 	if ! cat /etc/bos_version 2>/dev/null; then
@@ -7,17 +9,38 @@ current_fw_version() {
 	fi
 }
 
+current_fw_major() {
+	cat /etc/bos_major 2>/dev/null || echo unknown
+}
+
 check_fw_version() {
+	echo "Gathering current firmware information..."
+
 	local board_name=$1
+	local fw_major=$(current_fw_major)
 	local fw_version=$(current_fw_version)
-	local fw_version_compat="$2"
 
-	echo "Checking firmware compatibility..."
+	echo "board  : $board_name"
+	echo "version: $fw_version"
+	echo "major  : $fw_major"
 
-	if [ x"$fw_version" != x"$fw_version_compat" ]; then
-		echo "Firmware upgrade is compatible only with version '$fw_version_compat'"
-		echo "Installed version is: $fw_version ($board_name)"
-		return 1
+	echo "Checking compatibility..."
+
+	if [ "$UPGRADE_FW_VERSION" ">" "$fw_version" ]; then
+		# firmware upgrade
+		if [ "$UPGRADE_FW_REQUIRE" ">" "$fw_version" ]; then
+			echo "Firmware upgrade to '$UPGRADE_FW_VERSION' is not possible!"
+			echo "Firmware version '$UPGRADE_FW_REQUIRE' is required before upgrading to this version."
+			return 1
+		fi
+	elif [ "$UPGRADE_FW_VERSION" "<" "$fw_version" ]; then
+		# firmware downgrade
+		if [ "$UPGRADE_FW_MAJOR" != "$fw_major" ]; then
+			echo "Firmware downgrade to '$UPGRADE_FW_VERSION' is not possible!"
+			echo "Downgrade is only possible among firmwares with major version '$UPGRADE_FW_MAJOR'."
+			echo "Do the factory reset and try to upgrade to this version."
+			return 1
+		fi
 	fi
 
 	return 0
