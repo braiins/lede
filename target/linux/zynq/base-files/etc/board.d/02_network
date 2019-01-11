@@ -2,43 +2,22 @@
 # Copyright (C) 2015 OpenWrt.org
 
 . /lib/functions/uci-defaults.sh
+. /lib/functions/bos-defaults.sh
 
-BOS_MODE=$(cat /etc/bos_mode)
-
-get_config() {
-	# return empty string when bOS mode is not 'nand' to use default settings
-	case $BOS_MODE in
-	'nand')
-		/usr/sbin/fw_printenv -n "$1" 2>/dev/null
-		;;
-	'recovery')
-		/usr/sbin/fw_printenv -c /tmp/fw_env.config -n "recovery_$1" 2>/dev/null
-		;;
-	esac
-}
-
-hostname=$(get_config "net_hostname")
-ipaddr=$(get_config "net_ip")
-
-if [ -z "$hostname" ]; then
-	# use default hostname when it is missing
-	macaddr="$(cat /sys/class/net/eth0/address)"
-	minerid="$(echo $macaddr | sed 's/.*:\(.*\):\(.*\):\(.*\)/\1\2\3/')"
-	hostname="miner-$minerid"
-fi
+ipaddr=$(bos_get_config "net_ip")
 
 # use static protocol when IP is specified
 [ -n "$ipaddr" ] && protocol='static' || protocol='dhcp'
 
 board_config_update
 
-ucidef_set_interface_lan 'eth0' "$protocol" "$hostname"
+ucidef_set_interface_lan 'eth0' "$protocol"
 
 if [ $protocol = 'static' ]; then
     # static protocol requires other parameters
-	netmask=$(get_config "net_mask")
-	gateway=$(get_config "net_gateway")
-	dns_servers=$(get_config "net_dns_servers" | tr , " ")
+	netmask=$(bos_get_config "net_mask")
+	gateway=$(bos_get_config "net_gateway")
+	dns_servers=$(bos_get_config "net_dns_servers" | tr , " ")
 	json_select network
 		json_select lan
 			json_add_string ipaddr "$ipaddr"

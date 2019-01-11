@@ -1,8 +1,7 @@
 #!/bin/sh
 
 . /lib/functions/uci-defaults.sh
-
-BOS_MODE=$(cat /etc/bos_mode)
+. /lib/functions/bos-defaults.sh
 
 if [ $BOS_MODE == 'recovery' ]; then
 	DEFAULT_UENV_MTD=mtd4
@@ -14,9 +13,18 @@ if [ $BOS_MODE == 'recovery' ]; then
 	sed "s/$DEFAULT_UENV_MTD/$uboot_env_mtd/" /etc/fw_env.config >/tmp/fw_env.config
 fi
 
+hostname=$(bos_get_config "net_hostname")
+
+if [ -z "$hostname" ]; then
+	# use default hostname when it is missing
+	macaddr="$(cat /sys/class/net/eth0/address)"
+	minerid="$(echo $macaddr | sed 's/.*:\(.*\):\(.*\):\(.*\)/\1\2\3/')"
+	hostname="miner-$minerid"
+fi
+
 board_config_update
 
-ucidef_set_hostname "MINER"
+ucidef_set_hostname "$hostname"
 
 board_config_flush
 
