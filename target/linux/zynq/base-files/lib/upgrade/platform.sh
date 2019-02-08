@@ -3,6 +3,19 @@ REQUIRE_IMAGE_METADATA=1
 RAMFS_COPY_BIN="/usr/sbin/fw_printenv /usr/sbin/fw_setenv /usr/sbin/nanddump /usr/bin/tail"
 RAMFS_COPY_DATA="/etc/fw_env.config /var/lock/fw_printenv.lock"
 
+zynq_write_spl() {
+	local tar_file=$1
+	local board_name="$(nand_board_name)"
+
+	local spl_length=`(tar xf ${tar_file} sysupgrade-$board_name/spl -O | wc -c) 2> /dev/null`
+
+	[ "$spl_length" != 0 ] && {
+		echo "Upgrading SPL..."
+		mtd erase boot
+		tar xf $tar_file sysupgrade-$board_name/spl -O | mtd write - boot
+	}
+}
+
 zynq_write_uboot() {
 	local tar_file=$1
 	local board_name="$(nand_board_name)"
@@ -181,6 +194,7 @@ platform_nand_pre_upgrade() {
 	local dst_firmware=$(($cur_firmware % 2 + 1))
 
 	zynq_command_pre_upgrade "$1"
+	zynq_write_spl "$1"
 	zynq_write_uboot "$1"
 	zynq_write_fpga_partition "$1" ${cur_firmware} ${dst_firmware}
 	CI_UBIPART="$(zynq_get_firmware_partition ${dst_firmware})"
