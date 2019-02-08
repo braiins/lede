@@ -20,6 +20,9 @@ zynq_board_detect() {
 	*"DragonMint T1/G19 Miner Control Board")
 		name="dm1-g19"
 		;;
+	*"DragonMint T1/G29 Miner Control Board")
+		name="dm1-g29"
+		;;
 	*"AntMiner S9 Miner Control Board")
 		name="am1-s9"
 		;;

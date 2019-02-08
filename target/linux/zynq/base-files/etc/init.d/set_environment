@@ -9,6 +9,7 @@ start() {
 	case $(zynq_board_name) in
 		dm1-g9|\
 		dm1-g19|\
+		dm1-g29|\
 		am1-s9)
 			local miner_hwid=$(fw_printenv -n miner_hwid 2>/dev/null)
 

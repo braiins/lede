@@ -1,0 +1,7 @@
+check_image() {
+	check_fw_version $1
+}
+
+pre_upgrade() {
+	return
+}

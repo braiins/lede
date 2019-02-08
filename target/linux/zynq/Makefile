@@ -14,7 +14,7 @@ FEATURES:=fpu gpio rtc usb usbgadget targz squashfs nand
 DEPENDS:=+@KERNEL_DEVKMEM +@KERNEL_DEVMEM
 CPU_TYPE:=cortex-a9
 CPU_SUBTYPE:=neon
-SUBTARGETS:=dm1-g9 dm1-g19 am1-s9
+SUBTARGETS:=dm1-g9 dm1-g19 dm1-g29 am1-s9
 MAINTAINER:=Jason Wu <jason.wu.misc@gmail.com>
 
 # future support SUBTARGETS: for both zynq and zynqmp
