@@ -1,0 +1,9 @@
+#!/bin/sh
+
+[ "${ACTION}" = "pressed" ] || exit 0
+
+/usr/sbin/miner fault_light on
+/usr/sbin/miner ip_report
+/usr/sbin/miner fault_light off
+
+return 0
