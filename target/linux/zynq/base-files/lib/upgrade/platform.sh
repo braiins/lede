@@ -1,6 +1,10 @@
 REQUIRE_IMAGE_METADATA=1
 
-RAMFS_COPY_BIN="/usr/sbin/fw_printenv /usr/sbin/fw_setenv /usr/sbin/nanddump /usr/bin/tail"
+RAMFS_COPY_BIN="/bin/busybox:/bin/ln:/bin/sed:/usr/bin/tail"
+RAMFS_COPY_BIN="$RAMFS_COPY_BIN /usr/sbin/nanddump"
+RAMFS_COPY_BIN="$RAMFS_COPY_BIN /usr/sbin/fw_printenv"
+RAMFS_COPY_BIN="$RAMFS_COPY_BIN /usr/sbin/fw_printenv:/usr/sbin/fw_setenv"
+
 RAMFS_COPY_DATA="/etc/fw_env.config /var/lock/fw_printenv.lock"
 
 zynq_write_spl() {
