@@ -46,3 +46,38 @@ check_fw_version() {
 	return 0
 }
 
+fix_system_hostname() {
+	# affected firmwares does not have linked sed in sysupgrade rootfs
+	[ -f "/bin/sed" ] && return 0
+
+	/bin/busybox ln -s /bin/busybox /bin/sed
+
+	local conf_dir_path="/tmp/sysupgrade_cfg"
+	local conf_tgz_path="/tmp/sysupgrade.tgz"
+
+	# extract configuration files from tarball
+	mkdir -p "$conf_dir_path"
+	tar -xzf "$conf_tgz_path" -C "$conf_dir_path"
+
+	sys_hostname=$(sed -n "/config system/,/config/s/.*option hostname '\(.*\)'/\1/p" \
+		"$conf_dir_path/etc/config/system" 2>/dev/null)
+	eth_hostname=$(sed -n "/config.*'lan'/,/config/s/.*option hostname '\(.*\)'/\1/p" \
+		"$conf_dir_path/etc/config/network" 2>/dev/null)
+
+	# detect obsolete miner system hostname
+	if [ "$sys_hostname" = "MINER" -a -n "$eth_hostname" ]; then
+		echo "Fixing obsolete miner system hostname..."
+		# move ethernet specific hostname to global system hostname
+		sed -i "/config system/,/config/s/\(.*option hostname\) .*/\1 '$eth_hostname'/" \
+			"$conf_dir_path/etc/config/system" 2>/dev/null && \
+		sed -i "/config.*'lan'/,/config/{/.*option hostname '/d}" \
+			"$conf_dir_path/etc/config/network" 2>/dev/null && \
+		tar -czf "$conf_tgz_path" -C "$conf_dir_path" $(ls -A "$conf_dir_path")
+	fi
+
+	# cleanup system
+	rm -fr "$conf_dir_path"
+	rm /bin/sed
+
+	return 0
+}

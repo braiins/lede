@@ -3,5 +3,6 @@ check_image() {
 }
 
 pre_upgrade() {
+	fix_system_hostname
 	return
 }
