@@ -2,6 +2,9 @@ UPGRADE_FW_MAJOR="%F"
 UPGRADE_FW_VERSION="%f"
 UPGRADE_FW_REQUIRE="%r"
 
+CONF_DIR_PATH="/tmp/sysupgrade_cfg"
+CONF_TGZ_PATH="/tmp/sysupgrade.tgz"
+
 current_fw_version() {
 	if ! cat /etc/bos_version 2>/dev/null; then
 		awk '/Package: /{p=$2} /Version: /{v=$2} /Status: /{if (p == "firmware" && $NF == "installed") print v}' \
@@ -46,18 +49,34 @@ check_fw_version() {
 	return 0
 }
 
+modify_configs() {
+	# extract configuration files from tarball
+	mkdir -p "$CONF_DIR_PATH"
+	tar -xzf "$CONF_TGZ_PATH" -C "$CONF_DIR_PATH"
+	echo "$CONF_DIR_PATH"
+
+	return 0
+}
+
+finish_configs_modification() {
+	if [ "$1" == "store" ]; then
+		tar -czf "$CONF_TGZ_PATH" -C "$CONF_DIR_PATH" $(ls -A "$CONF_DIR_PATH")
+	fi
+
+	# cleanup system
+	rm -rf "$CONF_DIR_PATH"
+
+	return 0
+}
+
 fix_system_hostname() {
 	# affected firmwares does not have linked sed in sysupgrade rootfs
 	[ -f "/bin/sed" ] && return 0
 
 	/bin/busybox ln -s /bin/busybox /bin/sed
 
-	local conf_dir_path="/tmp/sysupgrade_cfg"
-	local conf_tgz_path="/tmp/sysupgrade.tgz"
-
-	# extract configuration files from tarball
-	mkdir -p "$conf_dir_path"
-	tar -xzf "$conf_tgz_path" -C "$conf_dir_path"
+	local conf_dir_path=$(modify_configs)
+	local conf_action="discard"
 
 	sys_hostname=$(sed -n "/config system/,/config/s/.*option hostname '\(.*\)'/\1/p" \
 		"$conf_dir_path/etc/config/system" 2>/dev/null)
@@ -72,11 +91,12 @@ fix_system_hostname() {
 			"$conf_dir_path/etc/config/system" 2>/dev/null && \
 		sed -i "/config.*'lan'/,/config/{/.*option hostname '/d}" \
 			"$conf_dir_path/etc/config/network" 2>/dev/null && \
-		tar -czf "$conf_tgz_path" -C "$conf_dir_path" $(ls -A "$conf_dir_path")
+		conf_action="store"
 	fi
 
+	finish_configs_modification $conf_action
+
 	# cleanup system
-	rm -fr "$conf_dir_path"
 	rm /bin/sed
 
 	return 0

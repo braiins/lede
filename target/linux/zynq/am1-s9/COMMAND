@@ -1,8 +1,134 @@
+CGMINER_CONF="/etc/cgminer.conf"
+BOSMINER_CONF="/tmp/bosminer.toml"
+
+sort_list() {
+	echo "$1" | \
+	sed -e 's/,\+$//' -e 's/\(,\+\)/\n/g' | sed 's/^0\+\(\d\+\)/\1/' | \
+	sort -n${2} 2> /dev/null
+}
+
+get_min() {
+	sort_list "$1" | head -n1
+}
+
+get_max() {
+	sort_list "$1" "r" | head -n1
+}
+
+begins_with() {
+	case "$2" in
+		"$1"*) true;;
+		*) false;;
+	esac
+}
+
+migrate_cgminer_conf() {
+	# Do not migrate CGMiner config when BOSMiner config is already generated
+	[ -f "$BOSMINER_CONF" -o ! -f "$CGMINER_CONF" ] && exit 0
+
+	echo "Migrating obsolete CGMiner configuration..."
+
+	. /usr/share/libubox/jshn.sh
+
+	cat > "$BOSMINER_CONF" <<-END
+		[format]
+		version = '1.0'
+		model = 'Antminer S9'
+		generator = 'sysupgrade_script'
+		timestamp = $(date +%s)
+	END
+
+	json_init
+	json_load "$(cat $CGMINER_CONF)"
+
+	local multi_version
+	local frequency
+	local voltage
+
+	if json_get_type Type "multi-version" && [ "$Type" == string ]; then
+		json_get_var multi_version "multi-version"
+	fi
+	if json_get_type Type "bitmain-freq" && [ "$Type" == string ]; then
+		json_get_var frequency "bitmain-freq"
+	fi
+	if json_get_type Type "bitmain-voltage" && [ "$Type" == string ]; then
+		json_get_var voltage "bitmain-voltage"
+	fi
+
+	# Chain ID in original CGMiner config does not correspond to real ID and
+	# it is also dynamic so per chain conversion is not possible
+	frequency=$(get_min $frequency)
+	voltage=$(get_max $voltage)
+
+	if [ "$multi_version" != "4" -o -n "$frequency" -o -n "$voltage" ]; then
+		cat >> "$BOSMINER_CONF" <<-END
+
+			[hash_chain_global]
+		END
+		[ "$multi_version" != "4" ] && echo "asic_boost = false" >> "$BOSMINER_CONF"
+		[ -n "$frequency" ] && echo "frequency = ${frequency}" >> "$BOSMINER_CONF"
+		[ -n "$voltage" ] && echo "voltage = ${voltage}" >> "$BOSMINER_CONF"
+	fi
+
+	cat >> "$BOSMINER_CONF" <<-END
+
+		[[group]]
+		name = 'Default'
+	END
+
+	if json_get_type Type "pools" && [ "$Type" == array ]; then
+		local pool_url
+		local pool_user
+		local pool_pass
+
+		json_select "pools"
+		local idx="1"
+		while json_get_type Type "$idx" && [ "$Type" == object ]; do
+			json_select "$idx"
+			json_get_var pool_url "url"
+			json_get_var pool_user "user"
+			json_get_var pool_pass "pass"
+			json_select ..
+
+			if begins_with "stratum+tcp://" "$pool_url" && [ -n "$pool_user" ]; then
+				cat >> "$BOSMINER_CONF" <<-END
+
+					[[group.pool]]
+					url = '${pool_url}'
+					user = '${pool_user}'
+				END
+				[ -n "$pool_pass" ] && \
+				cat >> "$BOSMINER_CONF" <<-END
+					password = '${pool_pass}'
+				END
+			fi
+
+			$((idx++)) 2> /dev/null
+		done
+		json_select ..
+	fi
+	return 0
+}
+
+replace_cgminer_conf() {
+	local conf_dir_path=$(modify_configs)
+	local conf_action="discard"
+
+	rm "${conf_dir_path}${CGMINER_CONF}" 2>/dev/null && \
+		conf_action="store"
+	cp "${BOSMINER_CONF}" "${conf_dir_path}/etc/" 2>/dev/null && \
+		conf_action="store"
+
+	finish_configs_modification $conf_action
+	return 0
+}
+
 check_image() {
-	check_fw_version $1
+	check_fw_version $1 && migrate_cgminer_conf
 }
 
 pre_upgrade() {
 	fix_system_hostname
+	replace_cgminer_conf
 	return
 }
