@@ -124,10 +124,12 @@ replace_cgminer_conf() {
 }
 
 check_image() {
-	check_fw_version $1 && migrate_cgminer_conf
+	check_fw_version $1 && \
+	migrate_cgminer_conf
 }
 
 pre_upgrade() {
+	fix_recovery_partition
 	fix_system_hostname
 	replace_cgminer_conf
 	return

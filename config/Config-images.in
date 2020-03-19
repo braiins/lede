@@ -251,6 +251,10 @@ menu "Target Images"
 
 	source "target/linux/*/image/Config.in"
 
+	config EXTERNAL_BINARY_TREE
+		string "Use external binary tree with pre-build components"
+		default ""
+
 	config TARGET_KERNEL_PARTSIZE
 		int "Kernel partition size (in MB)"
 		depends on GRUB_IMAGES

@@ -101,3 +101,37 @@ fix_system_hostname() {
 
 	return 0
 }
+
+# Fix old firmwares where original U-Boot wasn't stored in recovery partition
+fix_recovery_partition() {
+	# affected firmwares does not have linked gzip in sysupgrade rootfs
+	[ -f "/bin/gzip" ] && return 0
+
+	/bin/busybox ln -s /bin/busybox /bin/gzip
+	/bin/busybox ln -s /bin/busybox /usr/bin/head
+
+	local UBOOT_MTD=/dev/mtd1
+	local RECOVERY_MTD=/dev/mtd6
+	local RECOVERY_MTD_NAME=recovery
+
+	local UBOOT_RECOVERY_OFFSET=0x1520000
+	# All previous U-Boots have the same size
+	local UBOOT_SIZE=573700
+
+	# Dump first bytes of original U-Boot from recovery partition
+	recovery_magic=$(nanddump -s ${UBOOT_RECOVERY_OFFSET} -ql 4 ${RECOVERY_MTD} | hexdump -v -n 4 -e '1/1 "%02x"')
+
+	# If U-Boot in recovery partition is not erased then no fix is needed
+	[ "$recovery_magic" == "ffffffff" ] || return 0
+
+	echo "Fixing missing U-Boot in recovery partition..."
+
+	# Use current U-Boot for creating backup in recovery partition
+	nanddump -l ${UBOOT_SIZE} ${UBOOT_MTD} | head -c ${UBOOT_SIZE} | gzip | \
+	mtd -np ${UBOOT_RECOVERY_OFFSET} write - ${RECOVERY_MTD_NAME}
+
+	# cleanup system
+	rm /usr/bin/head /bin/gzip
+
+	return 0
+}

@@ -84,11 +84,13 @@ define Device/Default
 	$(if $(CONFIG_SYSUPGRADE_WITH_COMMAND), \
 	| append-tar-file ../$(SUBTARGET)/COMMAND sysupgrade-$$(SUBTARGET)/COMMAND version_sed COMMAND) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_SPL), \
-	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$(SUBTARGET)/boot.bin sysupgrade-$$(SUBTARGET)/spl) \
+	| append-tar-file $$(CONFIG_EXTERNAL_BINARY_TREE)/$$(BOARD)/bootloaders/$$(SUBTARGET)/boot.bin sysupgrade-$$(SUBTARGET)/spl) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_UBOOT), \
-	| append-tar-file $(BIN_DIR)/uboot-$(BOARD)-$(SUBTARGET)/u-boot.img sysupgrade-$$(SUBTARGET)/uboot) \
+	| append-tar-file $$(CONFIG_EXTERNAL_BINARY_TREE)/$$(BOARD)/bootloaders/$$(SUBTARGET)/u-boot.img sysupgrade-$$(SUBTARGET)/uboot) \
+	$(if $(CONFIG_SYSUPGRADE_WITH_UBOOT), \
+	| append-tar-file $$(CONFIG_EXTERNAL_BINARY_TREE)/$$(BOARD)/bootloaders/$$(SUBTARGET)/uEnv.txt sysupgrade-$$(SUBTARGET)/uenv) \
 	$(if $(CONFIG_SYSUPGRADE_WITH_FPGA), \
-	| append-tar-file $$(CONFIG_TARGET_FPGA) sysupgrade-$$(SUBTARGET)/fpga compress) \
+	| append-tar-file $$(CONFIG_EXTERNAL_BINARY_TREE)/$$(BOARD)/bitstream/$$(SUBTARGET)/system.bit.gz sysupgrade-$$(SUBTARGET)/fpga) \
 	| append-metadata \
 	| append-signature
 	FILESYSTEMS := cpio

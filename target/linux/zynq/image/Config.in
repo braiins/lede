@@ -17,8 +17,3 @@ config SYSUPGRADE_WITH_FPGA
 	bool "Include FPGA bitstream to sysupgrade image"
 	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9
 	default n
-
-config TARGET_FPGA
-	string "Path to FPGA bitstream"
-	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9
-	default ""
