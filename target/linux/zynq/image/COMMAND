@@ -70,7 +70,7 @@ finish_configs_modification() {
 }
 
 fix_system_hostname() {
-	# affected firmwares does not have linked sed in sysupgrade rootfs
+	# affected firmwares do not have linked sed in sysupgrade rootfs
 	[ -f "/bin/sed" ] && return 0
 
 	/bin/busybox ln -s /bin/busybox /bin/sed
@@ -104,7 +104,7 @@ fix_system_hostname() {
 
 # Fix old firmwares where original U-Boot wasn't stored in recovery partition
 fix_recovery_partition() {
-	# affected firmwares does not have linked gzip in sysupgrade rootfs
+	# affected firmwares do not have linked gzip in sysupgrade rootfs
 	[ -f "/bin/gzip" ] && return 0
 
 	/bin/busybox ln -s /bin/busybox /bin/gzip
@@ -135,3 +135,21 @@ fix_recovery_partition() {
 
 	return 0
 }
+
+# Support of SPL upgrade for old firmwares
+compatible_write_spl() {
+	# affected firmwares do not implement 'zynq_write_spl' function
+	type 'zynq_write_spl' >/dev/null 2>/dev/null && return 0
+
+	local board_name=$1
+	local tar_file=$2
+
+	local spl_length=`(tar xf ${tar_file} sysupgrade-$board_name/spl -O | wc -c) 2> /dev/null`
+
+	[ "$spl_length" != 0 ] && {
+		echo "Upgrading SPL..."
+		mtd erase boot
+		tar xf ${tar_file} sysupgrade-$board_name/spl -O | mtd write - boot
+	}
+}
+

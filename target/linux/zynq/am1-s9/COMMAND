@@ -129,8 +129,12 @@ check_image() {
 }
 
 pre_upgrade() {
+	local board_name=$1
+	local tar_file=$2
+
 	fix_recovery_partition
 	fix_system_hostname
 	replace_cgminer_conf
+	compatible_write_spl $board_name $tar_file
 	return
 }
