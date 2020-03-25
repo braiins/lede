@@ -136,5 +136,6 @@ pre_upgrade() {
 	fix_system_hostname
 	replace_cgminer_conf
 	compatible_write_spl $board_name $tar_file
+	compatible_write_uenv $board_name $tar_file
 	return
 }

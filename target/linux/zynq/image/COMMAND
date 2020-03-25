@@ -136,6 +136,24 @@ fix_recovery_partition() {
 	return 0
 }
 
+# Support of U-Boot default environment upgrade for old firmwares
+compatible_write_uenv() {
+	# affected firmwares do not implement 'zynq_write_uenv' function
+	type 'zynq_write_uenv' >/dev/null 2>/dev/null && return 0
+
+	local board_name=$1
+	local tar_file=$2
+
+	local file_path=sysupgrade-$board_name/uenv
+	local uenv_length=`(tar xf ${tar_file} $file_path -O | wc -c) 2>/dev/null`
+
+	[ "$uenv_length" != 0 ] && {
+		echo "Upgrading U-Boot default environment..."
+		tar xf ${tar_file} $file_path -O | fw_setenv --script -
+		fw_printenv
+	}
+}
+
 # Support of SPL upgrade for old firmwares
 compatible_write_spl() {
 	# affected firmwares do not implement 'zynq_write_spl' function

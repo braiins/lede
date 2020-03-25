@@ -36,6 +36,20 @@ zynq_write_if_different() {
 	return $result
 }
 
+zynq_write_uenv() {
+	local tar_file=$1
+	local board_name="$(nand_board_name)"
+
+	local file_path=sysupgrade-$board_name/uenv
+	local uenv_length=`(tar xf ${tar_file} $file_path -O | wc -c) 2>/dev/null`
+
+	[ "$uenv_length" != 0 ] && {
+		echo "Upgrading U-Boot default environment..."
+		tar xf ${tar_file} $file_path -O | fw_setenv --script -
+		fw_printenv
+	}
+}
+
 zynq_write_spl() {
 	local tar_file=$1
 
@@ -47,16 +61,8 @@ zynq_write_uboot() {
 	local board_name="$(nand_board_name)"
 
 	zynq_write_if_different ${tar_file} uboot uboot "U-Boot" || return 0
-
 	# it is also needed to upgrade U-Boot enviroment when U-Boot has been upgraded
-	local file_path=sysupgrade-$board_name/uenv
-	local uenv_length=`(tar xf ${tar_file} $file_path -O | wc -c) 2>/dev/null`
-
-	[ "$uenv_length" != 0 ] && {
-		echo "Upgrading U-Boot default environment..."
-		tar xf ${tar_file} $file_path -O | fw_setenv --script -
-		fw_printenv
-	}
+	zynq_write_uenv ${tar_file}
 }
 
 zynq_write_fpga_partition() {
