@@ -23,7 +23,7 @@ begins_with() {
 }
 
 migrate_cgminer_conf() {
-	# Do not migrate CGMiner config when BOSMiner config is already generated
+	# Do not migrate CGMiner config when BOSminer config is already generated
 	[ -f "$BOSMINER_CONF" -o ! -f "$CGMINER_CONF" ] && exit 0
 
 	echo "Migrating obsolete CGMiner configuration..."
