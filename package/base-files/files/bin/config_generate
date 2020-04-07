@@ -261,6 +261,14 @@ generate_static_system() {
 				uci -q set "system.@system[-1].hostname=$hostname"
 			fi
 
+			local log_size log_file
+			if json_get_var log_size log_size; then
+				uci -q set "system.@system[-1].log_size=$log_size"
+			fi
+			if json_get_var log_file log_file; then
+				uci -q set "system.@system[-1].log_file=$log_file"
+			fi
+
 			if json_is_a ntpserver array; then
 				local keys key
 				json_get_keys keys ntpserver

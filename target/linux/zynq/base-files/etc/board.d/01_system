@@ -25,6 +25,7 @@ fi
 board_config_update
 
 ucidef_set_hostname "$hostname"
+ucidef_set_log 1024 "/var/log/syslog"
 
 board_config_flush
 

@@ -642,6 +642,16 @@ ucidef_set_ntpserver() {
 	json_select ..
 }
 
+ucidef_set_log() {
+	local log_size="$1"
+	local log_file="$2"
+
+	json_select_object system
+		json_add_int log_size "$log_size"
+		[ -n "$log_file" ] && json_add_string log_file "$log_file"
+	json_select ..
+}
+
 board_config_update() {
 	json_init
 	[ -f ${CFG} ] && json_load "$(cat ${CFG})"
