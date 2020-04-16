@@ -1,6 +1,8 @@
 #!/bin/sh
 
 BOS_MODE=$(cat /etc/bos_mode)
+BOS_VERSION=$(cat /etc/bos_version)
+BOS_VERSION_SUFFIX=${BOS_VERSION#*-*-*-*-*-}
 
 bos_get_config() {
 	# return empty string when bOS mode is not 'nand' to use default settings
