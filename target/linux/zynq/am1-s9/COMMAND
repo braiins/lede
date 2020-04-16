@@ -32,7 +32,7 @@ migrate_cgminer_conf() {
 
 	cat > "$BOSMINER_CONF" <<-END
 		[format]
-		version = '1.0'
+		version = '1.0${UPGRADE_FW_VERSION_PLUS}'
 		model = 'Antminer S9'
 		generator = 'sysupgrade_script'
 		timestamp = $(date +%s)
