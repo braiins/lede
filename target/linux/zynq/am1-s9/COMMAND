@@ -34,7 +34,7 @@ has_substr() {
 
 migrate_cgminer_conf() {
 	# Do not migrate CGMiner config when BOSminer config is already generated
-	[ -f "$BOSMINER_CONF_DST" -o ! -f "$CGMINER_CONF" ] && exit 0
+	[ -f "$BOSMINER_CONF_DST" -o ! -f "$CGMINER_CONF" ] && return 0
 
 	echo "Migrating obsolete CGMiner configuration..."
 
@@ -236,11 +236,11 @@ migrate_bosminer_toml_to_plus() {
 
 migrate_bosminer_toml() {
 	# Do not migrate BOSminer config when BOSminer config is not present
-	[ ! -f "$BOSMINER_CONF" ] && exit 0
+	[ ! -f "$BOSMINER_CONF" ] && return 0
 
 	local current_toml_version=$(get_bosminer_toml_version)
 	# Exit when format version cannot be determined
-	[ -z "$current_toml_version" ] && exit 0
+	[ -z "$current_toml_version" ] && return 0
 
 	local current_toml_version_plus=""
 	case $current_toml_version in *+) current_toml_version_plus="+";; esac
@@ -270,9 +270,10 @@ replace_cgminer_conf() {
 }
 
 check_image() {
-	check_fw_version $1 && \
-	migrate_bosminer_toml && \
-	migrate_cgminer_conf
+	check_fw_version $1 && {
+		migrate_bosminer_toml
+		migrate_cgminer_conf
+	}
 }
 
 pre_upgrade() {
