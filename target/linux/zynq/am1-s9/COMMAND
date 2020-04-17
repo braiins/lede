@@ -1,5 +1,8 @@
 CGMINER_CONF="/etc/cgminer.conf"
-BOSMINER_CONF="/tmp/bosminer.toml"
+BOSMINER_CONF="/etc/bosminer.toml"
+
+BOSMINER_CONF_DST="/tmp/bosminer.toml"
+CONFIG_GENERATOR="sysupgrade_script"
 
 sort_list() {
 	echo "$1" | \
@@ -24,17 +27,17 @@ begins_with() {
 
 migrate_cgminer_conf() {
 	# Do not migrate CGMiner config when BOSminer config is already generated
-	[ -f "$BOSMINER_CONF" -o ! -f "$CGMINER_CONF" ] && exit 0
+	[ -f "$BOSMINER_CONF_DST" -o ! -f "$CGMINER_CONF" ] && exit 0
 
 	echo "Migrating obsolete CGMiner configuration..."
 
 	. /usr/share/libubox/jshn.sh
 
-	cat > "$BOSMINER_CONF" <<-END
+	cat > "$BOSMINER_CONF_DST" <<-END
 		[format]
 		version = '1.0${UPGRADE_FW_VERSION_PLUS}'
 		model = 'Antminer S9'
-		generator = 'sysupgrade_script'
+		generator = '${CONFIG_GENERATOR}'
 		timestamp = $(date +%s)
 	END
 
@@ -61,16 +64,16 @@ migrate_cgminer_conf() {
 	voltage=$(get_max $voltage)
 
 	if [ "$multi_version" != "4" -o -n "$frequency" -o -n "$voltage" ]; then
-		cat >> "$BOSMINER_CONF" <<-END
+		cat >> "$BOSMINER_CONF_DST" <<-END
 
 			[hash_chain_global]
 		END
-		[ "$multi_version" != "4" ] && echo "asic_boost = false" >> "$BOSMINER_CONF"
-		[ -n "$frequency" ] && echo "frequency = ${frequency}" >> "$BOSMINER_CONF"
-		[ -n "$voltage" ] && echo "voltage = ${voltage}" >> "$BOSMINER_CONF"
+		[ "$multi_version" != "4" ] && echo "asic_boost = false" >> "$BOSMINER_CONF_DST"
+		[ -n "$frequency" ] && echo "frequency = ${frequency}" >> "$BOSMINER_CONF_DST"
+		[ -n "$voltage" ] && echo "voltage = ${voltage}" >> "$BOSMINER_CONF_DST"
 	fi
 
-	cat >> "$BOSMINER_CONF" <<-END
+	cat >> "$BOSMINER_CONF_DST" <<-END
 
 		[[group]]
 		name = 'Default'
@@ -91,14 +94,14 @@ migrate_cgminer_conf() {
 			json_select ..
 
 			if begins_with "stratum+tcp://" "$pool_url" && [ -n "$pool_user" ]; then
-				cat >> "$BOSMINER_CONF" <<-END
+				cat >> "$BOSMINER_CONF_DST" <<-END
 
 					[[group.pool]]
 					url = '${pool_url}'
 					user = '${pool_user}'
 				END
 				[ -n "$pool_pass" ] && \
-				cat >> "$BOSMINER_CONF" <<-END
+				cat >> "$BOSMINER_CONF_DST" <<-END
 					password = '${pool_pass}'
 				END
 			fi
@@ -110,13 +113,124 @@ migrate_cgminer_conf() {
 	return 0
 }
 
+get_bosminer_toml_version() {
+	awk -f - "$BOSMINER_CONF" <<-EOF
+		/^\[format\]\$/ {
+			f = "y"; next
+		}
+		/^\[.*\]\$/ {
+			f = "n"; next
+		}
+		\$1 == "version" {
+			print substr(\$3, 2, length(\$3)-2)
+		}
+	EOF
+	return 0
+}
+
+migrate_bosminer_toml_to_open() {
+	echo "Migrating BOSminer+ configuration file to open version..."
+
+	local timestamp=$(date +%s)
+	awk -f - "$BOSMINER_CONF" > "$BOSMINER_CONF_DST" <<-EOF
+		function reset() {
+				f = "n"; a = "n"
+				g = "n"; t = "n"
+		}
+
+		BEGIN {
+				reset()
+		}
+		/^\[format\]\$/ {
+				reset(); f = "y"
+				print; next
+		}
+		/^\[autotuning\]\$/ {
+				reset(); a = "y"
+				print "# " \$0; next
+		}
+		/^\[.*\]\$/ {
+				if (f == "y") {
+						if (g == "n") print "generator = '${CONFIG_GENERATOR}'"
+						if (t == "n") print "timestamp = ${timestamp}"
+						if (g == "n" || t == "n") print ""
+				}
+				reset()
+		}
+		f == "y" && \$1 == "version" {
+				print "# " \$0; print "version = '1.0'"; next
+		}
+		f == "y" && \$1 == "generator" {
+				g = "y"; print "generator = '${CONFIG_GENERATOR}'"; next
+		}
+		f == "y" && \$1 == "timestamp" {
+				t = "y"; print "timestamp = ${timestamp}"; next
+		}
+		a == "y" {
+				print "# " \$0; next
+		}
+		{print}
+	EOF
+	return 0
+}
+
+migrate_bosminer_toml_to_plus() {
+	echo "Migrating BOSminer configuration file to plus version..."
+
+	local miner_psu_power_limit=$(fw_printenv -n miner_psu_power_limit 2>/dev/null )
+	awk -f - "$BOSMINER_CONF" > "$BOSMINER_CONF_DST" <<-EOF
+		/^\[format\]\$/ {
+			f = "y"
+			print; next
+		}
+		/^\[.*\]\$/ {
+			f = "n"
+		}
+		f == "y" && \$1 == "version" {
+			print "# " \$0; print "version = '1.0+'"; next
+		}
+		{print}
+		END {
+			if ("${miner_psu_power_limit}") {
+				print ""
+				print "[autotuning]"
+				print "enabled = true"
+				print "psu_power_limit = ${miner_psu_power_limit}"
+			}
+		}
+	EOF
+	return 0
+}
+
+migrate_bosminer_toml() {
+	# Do not migrate BOSminer config when BOSminer config is not present
+	[ ! -f "$BOSMINER_CONF" ] && exit 0
+
+	local current_toml_version=$(get_bosminer_toml_version)
+	# Exit when format version cannot be determined
+	[ -z "$current_toml_version" ] && exit 0
+
+	local current_toml_version_plus=""
+	case $current_toml_version in *+) current_toml_version_plus="+";; esac
+
+	if [ -n "$UPGRADE_FW_VERSION_PLUS" ]; then
+		# Do the migration when upgrading from open to plus version
+		[ -z "$current_toml_version_plus" ] && migrate_bosminer_toml_to_plus
+	else
+		# Do the migration when downgrading from plus to open version
+		[ -n "$current_toml_version_plus" ] && migrate_bosminer_toml_to_open
+	fi
+
+	return 0
+}
+
 replace_cgminer_conf() {
 	local conf_dir_path=$(modify_configs)
 	local conf_action="discard"
 
 	rm "${conf_dir_path}${CGMINER_CONF}" 2>/dev/null && \
 		conf_action="store"
-	cp "${BOSMINER_CONF}" "${conf_dir_path}/etc/" 2>/dev/null && \
+	cp "${BOSMINER_CONF_DST}" "${conf_dir_path}/etc/" 2>/dev/null && \
 		conf_action="store"
 
 	finish_configs_modification $conf_action
@@ -125,6 +239,7 @@ replace_cgminer_conf() {
 
 check_image() {
 	check_fw_version $1 && \
+	migrate_bosminer_toml && \
 	migrate_cgminer_conf
 }
 
