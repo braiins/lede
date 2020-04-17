@@ -25,6 +25,13 @@ begins_with() {
 	esac
 }
 
+has_substr() {
+	case "$2" in
+		*"$1"*) true;;
+		*) false;;
+	esac
+}
+
 migrate_cgminer_conf() {
 	# Do not migrate CGMiner config when BOSminer config is already generated
 	[ -f "$BOSMINER_CONF_DST" -o ! -f "$CGMINER_CONF" ] && exit 0
@@ -80,9 +87,7 @@ migrate_cgminer_conf() {
 	END
 
 	if json_get_type Type "pools" && [ "$Type" == array ]; then
-		local pool_url
-		local pool_user
-		local pool_pass
+		local pool_url pool_user pool_pass
 
 		json_select "pools"
 		local idx="1"
@@ -93,16 +98,43 @@ migrate_cgminer_conf() {
 			json_get_var pool_pass "pass"
 			json_select ..
 
-			if begins_with "stratum+tcp://" "$pool_url" && [ -n "$pool_user" ]; then
-				cat >> "$BOSMINER_CONF_DST" <<-END
+			# Detect stratum server
+			begins_with "stratum+tcp://" "$pool_url"
+			local stratum=$?
 
-					[[group.pool]]
-					url = '${pool_url}'
-					user = '${pool_user}'
+			if [ $stratum -eq 0 ] || ! has_substr "://" "$pool_url"; then
+				if [ $stratum -eq 0 ]; then
+					cat >> "$BOSMINER_CONF_DST" <<-END
+
+						[[group.pool]]
+						url = '${pool_url}'
+					END
+				else
+					cat >> "$BOSMINER_CONF_DST" <<-END
+
+						[[group.pool]]
+						# url = '${pool_url}'
+						url = 'stratum+tcp://${pool_url}'
+					END
+				fi
+				cat >> "$BOSMINER_CONF_DST" <<-END
+					user = '${pool_user:-!non-existent-user!}'
 				END
 				[ -n "$pool_pass" ] && \
 				cat >> "$BOSMINER_CONF_DST" <<-END
 					password = '${pool_pass}'
+				END
+			else
+				cat >> "$BOSMINER_CONF_DST" <<-END
+
+					# Incompatible pool
+					# [[group.pool]]
+					# url = '${pool_url}'
+					# user = '${pool_user}'
+				END
+				[ -n "$pool_pass" ] && \
+				cat >> "$BOSMINER_CONF_DST" <<-END
+					# password = '${pool_pass}'
 				END
 			fi
 
