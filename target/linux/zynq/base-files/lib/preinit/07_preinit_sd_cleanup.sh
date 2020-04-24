@@ -2,15 +2,21 @@
 
 MNT_OVERLAY="/tmp/mnt/overlay"
 
-LAST_MAC_PATH="${MNT_OVERLAY}/.last_mac"
+BOS_UENV_PATH="/tmp/mnt/boot/uEnv.txt"
 OVERLAY_UPPER="${MNT_OVERLAY}/upper"
 
-_sd_cleanup() {
-	last_mac=$(cat "$LAST_MAC_PATH" 2>/dev/null)
-	curr_mac=$(cat /sys/class/net/eth0/address)
+LAST_MAC_PATH="${MNT_OVERLAY}/.last_mac"
+LAST_UENV_PATH="${MNT_OVERLAY}/.last_uenv"
 
-	# if current MAC is the same as last one then do nothing
-	[ x"$curr_mac" == x"$last_mac" ] && return
+_sd_cleanup() {
+	local last_mac=$(cat "$LAST_MAC_PATH" 2>/dev/null)
+	local curr_mac=$(cat /sys/class/net/eth0/address)
+
+	# if current MAC and 'uEnv.txt' is the same as the last one then do nothing
+	[ x"$curr_mac" == x"$last_mac" ] \
+	&& [ \( -f "$BOS_UENV_PATH" -a -f "$LAST_UENV_PATH" \) -o \( ! -f "$BOS_UENV_PATH" -a ! -f "$LAST_UENV_PATH" \) ] \
+	&& cat "$LAST_UENV_PATH" 2>/dev/null | md5sum -cs \
+	&& return
 
 	# remove all configuration files which affect change of MAC address
 	rm "$OVERLAY_UPPER/etc/miner_hwid" 2>/dev/null
@@ -20,6 +26,10 @@ _sd_cleanup() {
 
 	# save current MAC address to ensure network persistence only for one device
 	echo "$curr_mac" > "$LAST_MAC_PATH"
+	# save MD5 of 'uEnv.txt' if exists otherwise delete the file
+	[ -f "$BOS_UENV_PATH" ] \
+	&& md5sum "$BOS_UENV_PATH" > "$LAST_UENV_PATH" \
+	|| rm -f "$LAST_UENV_PATH"
 }
 
 sd_cleanup() {
