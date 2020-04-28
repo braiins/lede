@@ -209,7 +209,19 @@ migrate_bosminer_toml_to_open() {
 migrate_bosminer_toml_to_plus() {
 	echo "Migrating BOSminer configuration file to plus version..."
 
-	local miner_psu_power_limit=$(fw_printenv -n miner_psu_power_limit 2>/dev/null )
+	local miner_psu_power_limit=$(fw_printenv -n miner_psu_power_limit 2>/dev/null)
+	local autotuning_enabled="yes"
+
+	case $miner_psu_power_limit in
+		default)
+			miner_psu_power_limit=
+		;;
+		"")
+			autotuning_enabled="no"
+			miner_psu_power_limit=
+		;;
+	esac
+
 	awk -f - "$BOSMINER_CONF" > "$BOSMINER_CONF_DST" <<-EOF
 		/^\[format\]\$/ {
 			f = "y"
@@ -223,11 +235,13 @@ migrate_bosminer_toml_to_plus() {
 		}
 		{print}
 		END {
-			if ("${miner_psu_power_limit}") {
+			if ("${autotuning_enabled}" == "yes") {
 				print ""
 				print "[autotuning]"
 				print "enabled = true"
-				print "psu_power_limit = ${miner_psu_power_limit}"
+				if ("${miner_psu_power_limit}") {
+					print "psu_power_limit = ${miner_psu_power_limit}"
+				}
 			}
 		}
 	EOF
