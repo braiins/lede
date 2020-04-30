@@ -1,0 +1,31 @@
+From a30a8fdced45b79bae12662caf68ffb8597858b3 Mon Sep 17 00:00:00 2001
+From: Yashavanth Chowrikoppalu <yashavanth.hsn@gmail.com>
+Date: Wed, 17 Apr 2019 15:21:18 +0200
+Subject: [PATCH] procd: copy the respawn property of new instance
+
+On updating an existing instance, the respawn property is reset
+in instance_stop(). Subsequent instance_update() call does not copy
+the respawn property from new instance in instance_config_move(). As
+a result, the respawning does not happen, if the process is killed
+externally.
+
+Signed-off-by: Yashavanth Chowrikoppalu <Yashavanth.hsn@gmail.com>
+---
+ service/instance.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/service/instance.c b/service/instance.c
+index 3512f66..ac96f7d 100644
+--- a/service/instance.c
++++ b/service/instance.c
+@@ -967,6 +967,7 @@ instance_config_move(struct service_instance *in, struct service_instance *in_sr
+ 	in->trigger = in_src->trigger;
+ 	in->command = in_src->command;
+ 	in->pidfile = in_src->pidfile;
++	in->respawn = in_src->respawn;
+ 	in->respawn_retry = in_src->respawn_retry;
+ 	in->respawn_threshold = in_src->respawn_threshold;
+ 	in->respawn_timeout = in_src->respawn_timeout;
+-- 
+2.11.0
+
