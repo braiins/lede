@@ -26,6 +26,9 @@ zynq_board_detect() {
 	*"AntMiner S9 Miner Control Board")
 		name="am1-s9"
 		;;
+	*"Antminer S15 Miner Control Board")
+		name="am2-s15"
+		;;
 	esac
 
 	[ -z "$name" ] && name="unknown"

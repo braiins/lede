@@ -1,5 +1,7 @@
 #!/bin/sh
 
+BOARD_NAME=$(cat /tmp/sysinfo/board_name)
+
 BOS_MODE=$(cat /etc/bos_mode)
 BOS_VERSION=$(cat /etc/bos_version)
 BOS_VERSION_SUFFIX=${BOS_VERSION#*-*-*-*-*-}
