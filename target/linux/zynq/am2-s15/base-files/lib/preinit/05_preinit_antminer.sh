@@ -1,35 +1,35 @@
 #!/bin/sh
 
 MNT_BOOT="/tmp/mnt/boot"
-MNT_ANTMINER_ROOTFS="/tmp/mnt/antminer_rootfs"
+MNT_ANTMINER_CONFIGS="/tmp/mnt/antminer_configs"
 
 OVERRIDE_MAC_PATH="/tmp/override_mac"
 OVERRIDE_CFG_PATH="/tmp/override_cfg"
 
-ANTMINER_MAC_PATH="$MNT_ANTMINER_ROOTFS/config/mac"
-ANTMINER_NET_PATH="$MNT_ANTMINER_ROOTFS/config/network.conf"
+ANTMINER_MAC_PATH="$MNT_ANTMINER_CONFIGS/mac"
+ANTMINER_NET_PATH="$MNT_ANTMINER_CONFIGS/network.conf"
 
 get_net_config() {
 	sed -n '/'$1'=/s/.*=["]*\([^"]*\)["]*/\1/p' "$ANTMINER_NET_PATH"
 }
 
 do_antminer() {
-	# find AntMiner rootfs MTD partition
-	local rootfs_mtd=$(sed -n '/antminer_rootfs/s/\(mtd[[:digit:]]\+\).*/\1/p' /proc/mtd)
-	[ -n "$rootfs_mtd" ] || return
+	# find Antminer configs MTD partition
+	local configs_mtd=$(sed -n '/antminer_configs/s/\(mtd[[:digit:]]\+\).*/\1/p' /proc/mtd)
+	[ -n "$configs_mtd" ] || return
 
-	# try to mount AntMiner rootfs from NAND
-	local rootfs_mtd="/dev/${rootfs_mtd}"
+	# try to mount Antminer configs from NAND
+	local configs_mtd="/dev/${configs_mtd}"
 
-	mkdir -p "$MNT_ANTMINER_ROOTFS" || return
+	mkdir -p "$MNT_ANTMINER_CONFIGS" || return
 
-	local rootfs_dettach rootfs_umount
-	ubiattach -p "$rootfs_mtd" &>/dev/null && rootfs_dettach=yes && \
-	mount -t ubifs ubi0:rootfs "$MNT_ANTMINER_ROOTFS" &>/dev/null && rootfs_umount=yes
+	local configs_dettach configs_umount
+	ubiattach -p "$configs_mtd" &>/dev/null && configs_dettach=yes && \
+	mount -t ubifs ubi0:configs "$MNT_ANTMINER_CONFIGS" &>/dev/null && configs_umount=yes
 
-	if [ x"$rootfs_umount" != x"yes" ]; then
-		[ x"$rootfs_dettach" == x"yes" ] && ubidetach -p "$rootfs_mtd" &>/dev/null
-		rmdir "$MNT_ANTMINER_ROOTFS"
+	if [ x"$configs_umount" != x"yes" ]; then
+		[ x"$configs_dettach" == x"yes" ] && ubidetach -p "$configs_mtd" &>/dev/null
+		rmdir "$MNT_ANTMINER_CONFIGS"
 		return
 	fi
 
