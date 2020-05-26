@@ -1,8 +1,4 @@
 CGMINER_CONF="/etc/cgminer.conf"
-BOSMINER_CONF="/etc/bosminer.toml"
-
-BOSMINER_CONF_DST="/tmp/bosminer.toml"
-CONFIG_GENERATOR="sysupgrade_script"
 
 sort_list() {
 	echo "$1" | \
@@ -145,127 +141,69 @@ migrate_cgminer_conf() {
 	return 0
 }
 
-get_bosminer_toml_version() {
-	awk -f - "$BOSMINER_CONF" <<-EOF
-		/^\[format\]\$/ {
-			f = "y"; next
-		}
-		/^\[.*\]\$/ {
-			f = "n"; next
-		}
-		\$1 == "version" {
-			print substr(\$3, 2, length(\$3)-2)
-		}
-	EOF
+# Fix old firmwares where original U-Boot wasn't stored in recovery partition
+fix_recovery_partition() {
+	# affected firmwares do not have linked gzip in sysupgrade rootfs
+	[ -f "/bin/gzip" ] && return 0
+
+	/bin/busybox ln -s /bin/busybox /bin/gzip
+	/bin/busybox ln -s /bin/busybox /usr/bin/head
+
+	local UBOOT_MTD=/dev/mtd1
+	local RECOVERY_MTD=/dev/mtd6
+	local RECOVERY_MTD_NAME=recovery
+
+	local UBOOT_RECOVERY_OFFSET=0x1520000
+	# All previous U-Boots have the same size
+	local UBOOT_SIZE=573700
+
+	# Dump first bytes of original U-Boot from recovery partition
+	recovery_magic=$(nanddump -s ${UBOOT_RECOVERY_OFFSET} -ql 4 ${RECOVERY_MTD} | hexdump -v -n 4 -e '1/1 "%02x"')
+
+	# If U-Boot in recovery partition is not erased then no fix is needed
+	[ "$recovery_magic" == "ffffffff" ] || return 0
+
+	echo "Fixing missing U-Boot in recovery partition..."
+
+	# Use current U-Boot for creating backup in recovery partition
+	nanddump -l ${UBOOT_SIZE} ${UBOOT_MTD} | head -c ${UBOOT_SIZE} | gzip | \
+	mtd -np ${UBOOT_RECOVERY_OFFSET} write - ${RECOVERY_MTD_NAME}
+
+	# cleanup system
+	rm /usr/bin/head /bin/gzip
+
 	return 0
 }
 
-migrate_bosminer_toml_to_open() {
-	echo "Migrating BOSminer+ configuration file to open version..."
+fix_system_hostname() {
+	# affected firmwares do not have linked sed in sysupgrade rootfs
+	[ -f "/bin/sed" ] && return 0
 
-	local timestamp=$(date +%s)
-	awk -f - "$BOSMINER_CONF" > "$BOSMINER_CONF_DST" <<-EOF
-		function reset() {
-				f = "n"; a = "n"
-				g = "n"; t = "n"
-		}
+	/bin/busybox ln -s /bin/busybox /bin/sed
 
-		BEGIN {
-				reset()
-		}
-		/^\[format\]\$/ {
-				reset(); f = "y"
-				print; next
-		}
-		/^\[autotuning\]\$/ {
-				reset(); a = "y"
-				print "# " \$0; next
-		}
-		/^\[.*\]\$/ {
-				if (f == "y") {
-						if (g == "n") print "generator = '${CONFIG_GENERATOR}'"
-						if (t == "n") print "timestamp = ${timestamp}"
-						if (g == "n" || t == "n") print ""
-				}
-				reset()
-		}
-		f == "y" && \$1 == "version" {
-				print "# " \$0; print "version = '1.0'"; next
-		}
-		f == "y" && \$1 == "generator" {
-				g = "y"; print "generator = '${CONFIG_GENERATOR}'"; next
-		}
-		f == "y" && \$1 == "timestamp" {
-				t = "y"; print "timestamp = ${timestamp}"; next
-		}
-		a == "y" {
-				print "# " \$0; next
-		}
-		{print}
-	EOF
-	return 0
-}
+	local conf_dir_path=$(modify_configs)
+	local conf_action="discard"
 
-migrate_bosminer_toml_to_plus() {
-	echo "Migrating BOSminer configuration file to plus version..."
+	sys_hostname=$(sed -n "/config system/,/config/s/.*option hostname '\(.*\)'/\1/p" \
+		"$conf_dir_path/etc/config/system" 2>/dev/null)
+	eth_hostname=$(sed -n "/config.*'lan'/,/config/s/.*option hostname '\(.*\)'/\1/p" \
+		"$conf_dir_path/etc/config/network" 2>/dev/null)
 
-	local miner_psu_power_limit=$(fw_printenv -n miner_psu_power_limit 2>/dev/null)
-	local autotuning_enabled="yes"
-
-	case $miner_psu_power_limit in
-		default)
-			miner_psu_power_limit=
-		;;
-		"")
-			autotuning_enabled="no"
-			miner_psu_power_limit=
-		;;
-	esac
-
-	awk -f - "$BOSMINER_CONF" > "$BOSMINER_CONF_DST" <<-EOF
-		/^\[format\]\$/ {
-			f = "y"
-			print; next
-		}
-		/^\[.*\]\$/ {
-			f = "n"
-		}
-		f == "y" && \$1 == "version" {
-			print "# " \$0; print "version = '1.0+'"; next
-		}
-		{print}
-		END {
-			if ("${autotuning_enabled}" == "yes") {
-				print ""
-				print "[autotuning]"
-				print "enabled = true"
-				if ("${miner_psu_power_limit}") {
-					print "psu_power_limit = ${miner_psu_power_limit}"
-				}
-			}
-		}
-	EOF
-	return 0
-}
-
-migrate_bosminer_toml() {
-	# Do not migrate BOSminer config when BOSminer config is not present
-	[ ! -f "$BOSMINER_CONF" ] && return 0
-
-	local current_toml_version=$(get_bosminer_toml_version)
-	# Exit when format version cannot be determined
-	[ -z "$current_toml_version" ] && return 0
-
-	local current_toml_version_plus=""
-	case $current_toml_version in *+) current_toml_version_plus="+";; esac
-
-	if [ -n "$UPGRADE_FW_VERSION_PLUS" ]; then
-		# Do the migration when upgrading from open to plus version
-		[ -z "$current_toml_version_plus" ] && migrate_bosminer_toml_to_plus
-	else
-		# Do the migration when downgrading from plus to open version
-		[ -n "$current_toml_version_plus" ] && migrate_bosminer_toml_to_open
+	# detect obsolete miner system hostname
+	if [ "$sys_hostname" = "MINER" -a -n "$eth_hostname" ]; then
+		echo "Fixing obsolete miner system hostname..."
+		# move ethernet specific hostname to global system hostname
+		sed -i "/config system/,/config/s/\(.*option hostname\) .*/\1 '$eth_hostname'/" \
+			"$conf_dir_path/etc/config/system" 2>/dev/null && \
+		sed -i "/config.*'lan'/,/config/{/.*option hostname '/d}" \
+			"$conf_dir_path/etc/config/network" 2>/dev/null && \
+		conf_action="store"
 	fi
+
+	finish_configs_modification $conf_action
+
+	# cleanup system
+	rm /bin/sed
 
 	return 0
 }
@@ -281,6 +219,41 @@ replace_cgminer_conf() {
 
 	finish_configs_modification $conf_action
 	return 0
+}
+
+# Support of SPL upgrade for old firmwares
+compatible_write_spl() {
+	# affected firmwares do not implement 'zynq_write_spl' function
+	type 'zynq_write_spl' >/dev/null 2>/dev/null && return 0
+
+	local board_name=$1
+	local tar_file=$2
+
+	local spl_length=`(tar xf ${tar_file} sysupgrade-$board_name/spl -O | wc -c) 2> /dev/null`
+
+	[ "$spl_length" != 0 ] && {
+		echo "Upgrading SPL..."
+		mtd erase boot
+		tar xf ${tar_file} sysupgrade-$board_name/spl -O | mtd write - boot
+	}
+}
+
+# Support of U-Boot default environment upgrade for old firmwares
+compatible_write_uenv() {
+	# affected firmwares do not implement 'zynq_write_uenv' function
+	type 'zynq_write_uenv' >/dev/null 2>/dev/null && return 0
+
+	local board_name=$1
+	local tar_file=$2
+
+	local file_path=sysupgrade-$board_name/uenv
+	local uenv_length=`(tar xf ${tar_file} $file_path -O | wc -c) 2>/dev/null`
+
+	[ "$uenv_length" != 0 ] && {
+		echo "Upgrading U-Boot default environment..."
+		tar xf ${tar_file} $file_path -O | fw_setenv --script -
+		fw_printenv
+	}
 }
 
 check_image() {
