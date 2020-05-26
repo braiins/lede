@@ -11,7 +11,8 @@ start() {
 		dm1-g19|\
 		dm1-g29|\
 		am1-s9|\
-		am2-s15)
+		am1-s15|\
+		am2-s17)
 			local miner_hwid=$(fw_printenv -n miner_hwid 2>/dev/null)
 
 			if [ -n "$miner_hwid" ]; then

@@ -1,0 +1,13 @@
+check_image() {
+	check_fw_version $1 && {
+		migrate_bosminer_toml
+	}
+}
+
+pre_upgrade() {
+	local board_name=$1
+	local tar_file=$2
+
+	replace_bosminer_conf
+	return
+}

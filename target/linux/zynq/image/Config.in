@@ -1,19 +1,19 @@
 config SYSUPGRADE_WITH_COMMAND
 	bool "Include COMMAND script to sysupgrade image"
-	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9 || TARGET_zynq_am2_s15
+	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9 || TARGET_zynq_am2_s15 || TARGET_zynq_am2_s17
 	default n
 
 config SYSUPGRADE_WITH_SPL
 	bool "Include SPL to sysupgrade image"
-	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9 || TARGET_zynq_am2_s15
+	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9 || TARGET_zynq_am2_s15 || TARGET_zynq_am2_s17
 	default n
 
 config SYSUPGRADE_WITH_UBOOT
 	bool "Include U-Boot to sysupgrade image"
-	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9 || TARGET_zynq_am2_s15
+	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9 || TARGET_zynq_am2_s15 || TARGET_zynq_am2_s17
 	default n
 
 config SYSUPGRADE_WITH_FPGA
 	bool "Include FPGA bitstream to sysupgrade image"
-	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9 || TARGET_zynq_am2_s15
+	depends on TARGET_zynq_dm1_g9 || TARGET_zynq_dm1_g19 || TARGET_zynq_dm1_g29 || TARGET_zynq_am1_s9 || TARGET_zynq_am2_s15 || TARGET_zynq_am2_s17
 	default n
