@@ -256,8 +256,19 @@ compatible_write_uenv() {
 	}
 }
 
+fix_keep_file() {
+	local keep_path="/lib/upgrade/keep.d/$1"
+	local conf_file="$2"
+
+	if [ -f "$keep_path" ]; then
+		grep -q "$conf_file" "$keep_path" || \
+		echo "$conf_file" >> "$keep_path"
+	fi
+}
+
 check_image() {
 	check_fw_version $1 && {
+		fix_keep_file "bosminer" "/etc/bosminer-autotune.json"
 		migrate_bosminer_toml
 		migrate_cgminer_conf
 	}
