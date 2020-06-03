@@ -9,6 +9,8 @@ OVERRIDE_CFG_PATH="/tmp/override_cfg"
 ANTMINER_MAC_PATH="$MNT_ANTMINER_CONFIGS/mac"
 ANTMINER_NET_PATH="$MNT_ANTMINER_CONFIGS/network.conf"
 
+ANTMINER_DEFAULT_HOSTNAME="antMiner"
+
 get_net_config() {
 	sed -n '/'$1'=/s/.*=["]*\([^"]*\)["]*/\1/p' "$ANTMINER_NET_PATH"
 }
@@ -43,6 +45,9 @@ do_antminer() {
 	local net_mask=$(get_net_config "netmask")
 	local net_gateway=$(get_net_config "gateway")
 	local net_dns_servers=$(get_net_config "dnsservers" | tr " " ,)
+
+	# replace default AntMiner hostname with unique BOS hostname
+	[ x"$net_hostname" == x"$ANTMINER_DEFAULT_HOSTNAME" ] && net_hostname=
 
 	[ -n "$net_hostname" ] && echo "net_hostname=$net_hostname" >> "$OVERRIDE_CFG_PATH"
 	[ -n "$net_ip" ] && echo "net_ip=$net_ip" >> "$OVERRIDE_CFG_PATH"
