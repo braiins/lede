@@ -11,6 +11,9 @@ BOSMINER_CONF="/etc/bosminer.toml"
 BOSMINER_CONF_DST="/tmp/bosminer.toml"
 CONFIG_GENERATOR="sysupgrade_script"
 
+BOSMINER_CONF_VERSION_OPEN="1.0"
+BOSMINER_CONF_VERSION_PLUS="1.1+"
+
 current_fw_version() {
 	if ! cat /etc/bos_version 2>/dev/null; then
 		awk '/Package: /{p=$2} /Version: /{v=$2} /Status: /{if (p == "firmware" && $NF == "installed") print v}' \
@@ -210,6 +213,62 @@ migrate_bosminer_toml_to_plus() {
 	return 0
 }
 
+fix_bosminer_toml_version() {
+	local curr_ver="$1"
+	local next_ver="$2"
+
+	local fw_version=$(current_fw_version)
+
+	# Do the fix only during firmware upgrade
+	[ "$UPGRADE_FW_VERSION" ">" "$fw_version" ] || return 0
+	# Skip the fix when the format version is the same
+	[ "$curr_ver" != "$next_ver" ] || return 0
+
+	echo "Fixing BOSminer configuration file version..."
+
+	local timestamp=$(date +%s)
+	awk -f - "$BOSMINER_CONF" > "$BOSMINER_CONF_DST" <<-EOF
+		function reset() {
+			f = "n"
+			g = "n"; t = "n"
+		}
+
+		function print_generator(nl) {
+			if (f == "y") {
+				if (g == "n") print "generator = '${CONFIG_GENERATOR}'"
+				if (t == "n") print "timestamp = ${timestamp}"
+				if (nl && (g == "n" || t == "n")) print ""
+			}
+		}
+
+		BEGIN {
+			reset()
+		}
+		/^\[format\]\$/ {
+			reset(); f = "y"
+			print; next
+		}
+		/.*^\[.*\]\$/ {
+			print_generator(1)
+			reset()
+		}
+		f == "y" && \$1 == "version" {
+			print "# " \$0; print "version = '${next_ver}'"; next
+		}
+		f == "y" && \$1 == "generator" {
+			g = "y"; print "generator = '${CONFIG_GENERATOR}'"; next
+		}
+		f == "y" && \$1 == "timestamp" {
+			t = "y"; print "timestamp = ${timestamp}"; next
+		}
+		{print}
+		END {
+			print_generator(0)
+		}
+	EOF
+	return 0
+}
+
 migrate_bosminer_toml() {
 	# Do not migrate BOSminer config when BOSminer config is not present
 	[ ! -f "$BOSMINER_CONF" ] && return 0
@@ -223,10 +282,14 @@ migrate_bosminer_toml() {
 
 	if [ -n "$UPGRADE_FW_VERSION_PLUS" ]; then
 		# Do the migration when upgrading from open to plus version
-		[ -z "$current_toml_version_plus" ] && migrate_bosminer_toml_to_plus
+		[ -z "$current_toml_version_plus" ] \
+			&& migrate_bosminer_toml_to_plus \
+			|| fix_bosminer_toml_version "$current_toml_version" "$BOSMINER_CONF_VERSION_PLUS"
 	else
 		# Do the migration when downgrading from plus to open version
-		[ -n "$current_toml_version_plus" ] && migrate_bosminer_toml_to_open
+		[ -n "$current_toml_version_plus" ] \
+			&& migrate_bosminer_toml_to_open \
+			|| fix_bosminer_toml_version "$current_toml_version" "$BOSMINER_CONF_VERSION_OPEN"
 	fi
 
 	return 0
