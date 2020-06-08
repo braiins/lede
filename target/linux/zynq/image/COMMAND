@@ -96,42 +96,49 @@ migrate_bosminer_toml_to_open() {
 	local timestamp=$(date +%s)
 	awk -f - "$BOSMINER_CONF" > "$BOSMINER_CONF_DST" <<-EOF
 		function reset() {
-				f = "n"; a = "n"
-				g = "n"; t = "n"
+			f = "n"; c = "n"
+			g = "n"; t = "n"
+		}
+
+		function print_generator(nl) {
+			if (f == "y") {
+				if (g == "n") print "generator = '${CONFIG_GENERATOR}'"
+				if (t == "n") print "timestamp = ${timestamp}"
+				if (nl && (g == "n" || t == "n")) print ""
+			}
 		}
 
 		BEGIN {
-				reset()
+			reset()
 		}
 		/^\[format\]\$/ {
-				reset(); f = "y"
-				print; next
+			reset(); f = "y"
+			print; next
 		}
-		/^\[autotuning\]\$/ {
-				reset(); a = "y"
-				print "# " \$0; next
+		/^\[autotuning\]\$/ || /^\[power_scaling\]\$/ {
+			reset(); c = "y"
+			print "# " \$0; next
 		}
 		/^\[.*\]\$/ {
-				if (f == "y") {
-						if (g == "n") print "generator = '${CONFIG_GENERATOR}'"
-						if (t == "n") print "timestamp = ${timestamp}"
-						if (g == "n" || t == "n") print ""
-				}
-				reset()
+			print_generator(1)
+			reset()
 		}
 		f == "y" && \$1 == "version" {
-				print "# " \$0; print "version = '1.0'"; next
+			print "# " \$0; print "version = '1.0'"; next
 		}
 		f == "y" && \$1 == "generator" {
-				g = "y"; print "generator = '${CONFIG_GENERATOR}'"; next
+			g = "y"; print "generator = '${CONFIG_GENERATOR}'"; next
 		}
 		f == "y" && \$1 == "timestamp" {
-				t = "y"; print "timestamp = ${timestamp}"; next
+			t = "y"; print "timestamp = ${timestamp}"; next
 		}
-		a == "y" {
-				print "# " \$0; next
+		c == "y" {
+			print "# " \$0; next
 		}
 		{print}
+		END {
+			print_generator(0)
+		}
 	EOF
 	return 0
 }
@@ -152,19 +159,44 @@ migrate_bosminer_toml_to_plus() {
 		;;
 	esac
 
+	local timestamp=$(date +%s)
 	awk -f - "$BOSMINER_CONF" > "$BOSMINER_CONF_DST" <<-EOF
+		function reset() {
+			f = "n"
+			g = "n"; t = "n"
+		}
+
+		function print_generator(nl) {
+			if (f == "y") {
+				if (g == "n") print "generator = '${CONFIG_GENERATOR}'"
+				if (t == "n") print "timestamp = ${timestamp}"
+				if (nl && (g == "n" || t == "n")) print ""
+			}
+		}
+
+		BEGIN {
+			reset()
+		}
 		/^\[format\]\$/ {
-			f = "y"
+			reset(); f = "y"
 			print; next
 		}
-		/^\[.*\]\$/ {
-			f = "n"
+		/.*^\[.*\]\$/ {
+			print_generator(1)
+			reset()
 		}
 		f == "y" && \$1 == "version" {
-			print "# " \$0; print "version = '1.0+'"; next
+			print "# " \$0; print "version = '1.1+'"; next
+		}
+		f == "y" && \$1 == "generator" {
+			g = "y"; print "generator = '${CONFIG_GENERATOR}'"; next
+		}
+		f == "y" && \$1 == "timestamp" {
+			t = "y"; print "timestamp = ${timestamp}"; next
 		}
 		{print}
 		END {
+			print_generator(0)
 			if ("${autotuning_enabled}" == "yes") {
 				print ""
 				print "[autotuning]"
