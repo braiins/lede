@@ -266,6 +266,97 @@ fix_keep_file() {
 	fi
 }
 
+fix_system_log() {
+	local conf_dir_path=$(modify_configs)
+	local conf_action="discard"
+
+	local system_file="$conf_dir_path/etc/config/system"
+
+	# affected firmwares do not have 'log_file' option in 'system' configuration
+	if ! grep -q "^.*option.*log_file " "$system_file" 2>/dev/null; then
+		echo "Fixing logging configuration..."
+		# get current settings of 'log_size' attribute
+		local log_size=$(sed -n "/config system/,/config/s/.*option log_size .*'\(.*\)'.*/\1/p" \
+			"$system_file" 2>/dev/null)
+		# set log site to at least 1 MiB
+		log_size=$(( log_size > 1024 ? log_size : 1024 ))
+		# delete attributes 'log_size' and 'log_file' from 'system' section
+		sed -i "/config system/,/config/{/^.*option \(log_size\|log_file\) .*/d}" "$system_file"
+		# insert after hostname all new log attributes
+		local log_insert
+		log_insert="$log_insert\n\toption log_size '$log_size'"
+		log_insert="$log_insert\n\toption log_file '\/var\/log\/syslog'"
+		sed -i '/config system/,/config/{/.*hostname.*/s//&'"$log_insert"'/}' "$system_file"
+		conf_action="store"
+	fi
+
+	finish_configs_modification $conf_action
+
+	return 0
+}
+
+fix_bos_config() {
+	local conf_dir_path=$(modify_configs)
+	local conf_action="discard"
+
+	local bos_file="$conf_dir_path/etc/config/bos"
+
+	# affected firmwares have socat option in 'bos' configuration
+	if grep -q "^.*option.*socat " "$bos_file" 2>/dev/null; then
+		# old bos config can be deleted because new one will be generated after system upgrade
+		rm -f "$bos_file" && {
+			echo "Deleted obsolete '/etc/config/bos'!"
+			conf_action="store"
+		}
+
+		# socat utility was deleted from rootfs and configuration file is obsolete
+		# delete the file only if it is not modified
+		( cd "$conf_dir_path" && echo "6afb8381f8895dbcdb0415f8d22f90fd  etc/config/socat" \
+		| md5sum -cs ) 2>/dev/null && \
+		rm -f "$conf_dir_path/etc/config/socat" && {
+			echo "Deleted obsolete '/etc/config/socat'!"
+			conf_action="store"
+		}
+	fi
+
+	finish_configs_modification $conf_action
+
+	return 0
+}
+
+fix_crontabs() {
+	local conf_dir_path=$(modify_configs)
+	local conf_action="store"
+
+	local user_file="/tmp/crontabs_user"
+	local crontabs_file="$conf_dir_path/etc/crontabs/root"
+
+	# affected firmwares have old script 'bos_update.sh' in crontabs
+	if grep -q "bos_update.sh" "$crontabs_file" 2>/dev/null; then
+		echo "Fixing Braiins OS cron jobs..."
+
+		# create file only with user specified crontabs entries
+		grep -v -e "/usr/sbin/bos_up" -e "/etc/logrotate.conf" \
+			"$crontabs_file" > "$user_file" 2>/dev/null || true
+		if [ -s "$user_file" ]; then
+			# create updated crontabs with user specified entries
+			cat > "$crontabs_file" - "$user_file" <<-END
+				*/1 * * * * /usr/sbin/logrotate /etc/logrotate.conf 2>&1 | logger -t logrotate
+				0 0 * * * /usr/sbin/bos_upgrade_at 2>&1 | logger -t upgrade
+			END
+			rm "$user_file"
+		else
+			# delete crontabs and use rootfs one when there is no modifications
+			rm "$crontabs_file" 2>/dev/null || \
+				conf_action="discard"
+		fi
+	fi
+
+	finish_configs_modification $conf_action
+
+	return 0
+}
+
 check_image() {
 	check_fw_version $1 && {
 		fix_keep_file "bosminer" "/etc/bosminer-autotune.json"
@@ -280,6 +371,9 @@ pre_upgrade() {
 
 	fix_recovery_partition
 	fix_system_hostname
+	fix_system_log
+	fix_bos_config
+	fix_crontabs
 	replace_cgminer_conf
 	compatible_write_spl $board_name $tar_file
 	compatible_write_uenv $board_name $tar_file
